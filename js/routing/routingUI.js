@@ -43,15 +43,27 @@ export function setupUIHandlers(map) {
           // Initialize slider value from customModel
           const multiplyBy = getMapillaryPriority(routeState.customModel);
           if (multiplyBy !== null && multiplyBy !== undefined) {
-            const slider = document.getElementById('mapillary-priority-slider');
-            const sliderValue = document.getElementById('slider-value');
-            if (slider) {
-              // Map the multiply_by value to slider index
-              const sliderValues = [0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.6, 1.0];
-              const index = sliderValues.findIndex(v => Math.abs(v - multiplyBy) < 0.001);
-              if (index !== -1) {
-                slider.value = index;
+            // Use the exported function if available, otherwise set directly
+            if (window.setMapillarySliderValue) {
+              window.setMapillarySliderValue(multiplyBy);
+            } else {
+              const slider = document.getElementById('mapillary-priority-slider');
+              const sliderValue = document.getElementById('slider-value');
+              if (slider) {
+                // Find closest predefined value for slider position
+                const sliderValues = [0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.6, 1.0];
+                let closestIndex = 0;
+                let minDiff = Math.abs(multiplyBy - sliderValues[0]);
+                for (let i = 1; i < sliderValues.length; i++) {
+                  const diff = Math.abs(multiplyBy - sliderValues[i]);
+                  if (diff < minDiff) {
+                    minDiff = diff;
+                    closestIndex = i;
+                  }
+                }
+                slider.value = closestIndex;
                 if (sliderValue) {
+                  // Display the actual value (even if not in predefined list)
                   const inverseValue = (1 / multiplyBy).toFixed(0);
                   sliderValue.textContent = `${multiplyBy.toFixed(2)} (×${inverseValue})`;
                 }
@@ -189,17 +201,64 @@ export function setupUIHandlers(map) {
     });
   }
   
-  // Mapillary priority slider for car_customizable profile
+  // Mapillary priority slider for car_customizable and bike_customizable profiles
   const mapillarySlider = document.getElementById('mapillary-priority-slider');
   const sliderValueDisplay = document.getElementById('slider-value');
+  
+  // Define predefined slider values (only these can be selected by dragging)
+  const sliderValues = [0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.6, 1.0];
+  
+  // Helper functions to convert between slider index (0-9) and actual value
+  const sliderIndexToValue = (index) => {
+    const clampedIndex = Math.max(0, Math.min(9, Math.round(index)));
+    return sliderValues[clampedIndex];
+  };
+  
+  const valueToSliderIndex = (value) => {
+    // Find closest predefined value and return its index
+    let closestIndex = 0;
+    let minDiff = Math.abs(value - sliderValues[0]);
+    for (let i = 1; i < sliderValues.length; i++) {
+      const diff = Math.abs(value - sliderValues[i]);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestIndex = i;
+      }
+    }
+    return closestIndex;
+  };
+  
+  // Store the actual value from URL (may not be in predefined list)
+  let currentActualValue = null;
+  
+  // Export function to set slider value from external code (e.g., URL loading)
+  // This function is available globally and can be called even before event listeners are set up
+  window.setMapillarySliderValue = (value) => {
+    const slider = document.getElementById('mapillary-priority-slider');
+    const sliderValue = document.getElementById('slider-value');
+    if (slider) {
+      // Store the actual value (even if not in predefined list)
+      currentActualValue = value;
+      
+      // Find closest predefined value for slider position
+      const closestIndex = valueToSliderIndex(value);
+      slider.value = closestIndex;
+      
+      // Display the actual value (not the closest predefined one)
+      if (sliderValue) {
+        const inverseValue = (1 / value).toFixed(0);
+        sliderValue.textContent = `${value.toFixed(2)} (×${inverseValue})`;
+      }
+    }
+  };
+  
   if (mapillarySlider) {
-    // Define slider values with custom steps
-    const sliderValues = [0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.6, 1.0];
     
     let sliderTimeout = null;
     let sliderMaxTimeout = null;
     let sliderStartTime = null;
     let pendingRecalculation = false;
+    let isUserDragging = false;
     
     let retryInterval = null;
     
@@ -246,19 +305,32 @@ export function setupUIHandlers(map) {
       sliderStartTime = null;
     };
     
+    // Track when user starts dragging
+    mapillarySlider.addEventListener('mousedown', () => {
+      isUserDragging = true;
+    });
+    
+    mapillarySlider.addEventListener('touchstart', () => {
+      isUserDragging = true;
+    });
+    
     mapillarySlider.addEventListener('input', (e) => {
-      const index = parseInt(e.target.value);
-      const value = sliderValues[index];
+      const sliderIndex = parseInt(e.target.value);
+      // Always use the predefined value when user drags the slider
+      const actualValue = sliderIndexToValue(sliderIndex);
+      
+      // Clear the stored actual value from URL since user is now controlling
+      currentActualValue = null;
       
       if (sliderValueDisplay) {
         // Show inverse value to make it more intuitive (smaller multiply_by = higher priority)
-        const inverseValue = (1 / value).toFixed(0);
-        sliderValueDisplay.textContent = `${value.toFixed(2)} (×${inverseValue})`;
+        const inverseValue = (1 / actualValue).toFixed(0);
+        sliderValueDisplay.textContent = `${actualValue.toFixed(2)} (×${inverseValue})`;
       }
       
-      // Update customModel if car_customizable is selected
+      // Update customModel if customizable profile is selected
       if (supportsCustomModel(routeState.selectedProfile) && routeState.customModel) {
-        updateMapillaryPriority(routeState.customModel, value);
+        updateMapillaryPriority(routeState.customModel, actualValue);
         pendingRecalculation = true;
         
         // Track when slider movement started
@@ -289,6 +361,15 @@ export function setupUIHandlers(map) {
           }, 1000);
         }
       }
+    });
+    
+    // Track when user stops dragging
+    mapillarySlider.addEventListener('mouseup', () => {
+      isUserDragging = false;
+    });
+    
+    mapillarySlider.addEventListener('touchend', () => {
+      isUserDragging = false;
     });
   }
   

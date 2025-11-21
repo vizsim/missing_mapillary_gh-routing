@@ -341,12 +341,24 @@ export class Permalink {
           const sliderValue = document.getElementById('slider-value');
           const multiplyBy = getMapillaryPriority(routeState.customModel);
           if (multiplyBy !== null && multiplyBy !== undefined && slider) {
-            // Map the multiply_by value to slider index
-            const sliderValues = [0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.6, 1.0];
-            const index = sliderValues.findIndex(v => Math.abs(v - multiplyBy) < 0.001);
-            if (index !== -1) {
-              slider.value = index;
+            // Use the exported function if available, otherwise set directly
+            if (window.setMapillarySliderValue) {
+              window.setMapillarySliderValue(multiplyBy);
+            } else {
+              // Find closest predefined value for slider position
+              const sliderValues = [0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.6, 1.0];
+              let closestIndex = 0;
+              let minDiff = Math.abs(multiplyBy - sliderValues[0]);
+              for (let i = 1; i < sliderValues.length; i++) {
+                const diff = Math.abs(multiplyBy - sliderValues[i]);
+                if (diff < minDiff) {
+                  minDiff = diff;
+                  closestIndex = i;
+                }
+              }
+              slider.value = closestIndex;
               if (sliderValue) {
+                // Display the actual value (even if not in predefined list)
                 const inverseValue = (1 / multiplyBy).toFixed(0);
                 sliderValue.textContent = `${multiplyBy.toFixed(2)} (×${inverseValue})`;
               }
