@@ -9,8 +9,11 @@ import {
   supportsCustomModel,
   getGraphHopperProfile,
   ensureCustomModel,
-  buildPostRequestBodyWithCustomModel
+  buildPostRequestBodyWithCustomModel,
+  getMapillaryPriority,
+  updateMapillaryPriority
 } from './customModel.js';
+import { calculateDistance } from './heightgraph/heightgraphUtils.js';
 
 const GRAPHHOPPER_URL = 'http://localhost:8989';
 //const GRAPHHOPPER_URL = 'https://ghroute.duckdns.org';
@@ -20,6 +23,156 @@ let routeCalculationInProgress = false;
 
 export function isRouteCalculationInProgress() {
   return routeCalculationInProgress;
+}
+
+// Calculate comparison route with Weight=1 and show differences
+async function calculateComparisonWithWeightOne(map, allPoints, currentPath, currentEncodedValues, currentCoordinates, currentWeight) {
+  try {
+    // Create a copy of the custom model with Weight=1
+    const comparisonCustomModel = JSON.parse(JSON.stringify(routeState.customModel));
+    updateMapillaryPriority(comparisonCustomModel, 1.0);
+    
+    // Build request for comparison route
+    const requestBody = buildPostRequestBodyWithCustomModel(
+      allPoints,
+      routeState.selectedProfile,
+      comparisonCustomModel
+    );
+    
+    // Fetch comparison route
+    const response = await fetch(`${GRAPHHOPPER_URL}/route`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data.paths && data.paths.length > 0) {
+      const comparisonPath = data.paths[0];
+      
+      // Calculate differences
+      const distanceDiff = comparisonPath.distance - currentPath.distance; // in meters
+      const timeDiff = (comparisonPath.time - currentPath.time) / 1000; // in seconds
+      
+      // Calculate mapillary_coverage distance for current route
+      const currentMapillaryDistance = calculateMapillaryCoverageDistance(currentCoordinates, currentEncodedValues);
+      
+      // Get comparison route coordinates and encoded values
+      let comparisonCoordinates = [];
+      if (comparisonPath.points && comparisonPath.points.coordinates) {
+        comparisonCoordinates = comparisonPath.points.coordinates;
+      } else if (comparisonPath.points && comparisonPath.points.geometry && comparisonPath.points.geometry.coordinates) {
+        comparisonCoordinates = comparisonPath.points.geometry.coordinates;
+      }
+      
+      // Extract encoded values from comparison route
+      const comparisonEncodedValues = extractEncodedValues(comparisonPath, comparisonCoordinates);
+      
+      // Calculate mapillary_coverage distance for comparison route
+      const comparisonMapillaryDistance = calculateMapillaryCoverageDistance(comparisonCoordinates, comparisonEncodedValues);
+      
+      const mapillaryDistanceDiff = comparisonMapillaryDistance - currentMapillaryDistance;
+      
+      // Display comparison
+      displayComparison(distanceDiff, timeDiff, mapillaryDistanceDiff);
+    }
+  } catch (error) {
+    console.error('Error calculating comparison route:', error);
+    // Hide comparison on error
+    const comparisonContainer = document.getElementById('mapillary-weight-comparison');
+    if (comparisonContainer) {
+      comparisonContainer.style.display = 'none';
+    }
+  }
+}
+
+// Calculate distance of segments with mapillary_coverage==true
+// A segment goes from point i to point i+1, and the value belongs to point i
+function calculateMapillaryCoverageDistance(coordinates, encodedValues) {
+  if (!coordinates || coordinates.length < 2 || !encodedValues || !encodedValues.mapillary_coverage) {
+    return 0;
+  }
+  
+  let totalDistance = 0;
+  const mapillaryCoverage = encodedValues.mapillary_coverage;
+  
+  // Iterate over segments: segment i goes from point i to point i+1
+  // The mapillary_coverage value at point i applies to this segment
+  for (let i = 0; i < coordinates.length - 1; i++) {
+    // Check if the segment has mapillary_coverage==true
+    // Accept both true and 1 as valid coverage values
+    const hasCoverage = mapillaryCoverage[i] === true || mapillaryCoverage[i] === 1;
+    
+    if (hasCoverage) {
+      // Calculate segment distance using Haversine formula
+      const segmentDist = calculateDistance(coordinates[i], coordinates[i + 1]);
+      totalDistance += segmentDist;
+    }
+  }
+  
+  return totalDistance;
+}
+
+// Display comparison results
+function displayComparison(distanceDiff, timeDiff, mapillaryDistanceDiff) {
+  const comparisonContainer = document.getElementById('mapillary-weight-comparison');
+  if (!comparisonContainer) return;
+  
+  // Format differences - always show as positive values (absolute)
+  const formatDistance = (meters) => {
+    const absMeters = Math.abs(meters);
+    if (absMeters < 1000) {
+      return `${Math.round(absMeters)} m`;
+    }
+    return `${(absMeters / 1000).toFixed(2)} km`;
+  };
+  
+  const formatTime = (seconds) => {
+    const absSeconds = Math.abs(seconds);
+    if (absSeconds < 60) {
+      return `${Math.round(absSeconds)} s`;
+    }
+    const minutes = Math.round(absSeconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) {
+      return `${hours}h ${mins}min`;
+    }
+    return `${minutes} min`;
+  };
+  
+  const distanceElement = document.getElementById('comparison-distance');
+  const timeElement = document.getElementById('comparison-time');
+  const mapillaryDistanceElement = document.getElementById('comparison-mapillary-distance');
+  
+  if (distanceElement) {
+    const textSpan = distanceElement.querySelector('.comparison-text');
+    if (textSpan) {
+      textSpan.textContent = formatDistance(distanceDiff);
+    }
+  }
+  
+  if (timeElement) {
+    const textSpan = timeElement.querySelector('.comparison-text');
+    if (textSpan) {
+      textSpan.textContent = formatTime(timeDiff);
+    }
+  }
+  
+  if (mapillaryDistanceElement) {
+    const textSpan = mapillaryDistanceElement.querySelector('.comparison-text');
+    if (textSpan) {
+      textSpan.textContent = formatDistance(mapillaryDistanceDiff);
+    }
+  }
+  
+  // Show container
+  comparisonContainer.style.display = 'block';
 }
 
 // Validate coordinates before route calculation
@@ -787,6 +940,20 @@ export async function calculateRoute(map, start, end, waypoints = []) {
         
         // Update route color based on current selection
         updateRouteColor(routeState.currentEncodedType, encodedValues);
+        
+        // Calculate comparison with Weight=1 if current weight < 1
+        if (supportsCustomModel(routeState.selectedProfile) && routeState.customModel) {
+          const currentWeight = getMapillaryPriority(routeState.customModel);
+          if (currentWeight !== null && currentWeight < 1.0) {
+            calculateComparisonWithWeightOne(map, allPoints, path, encodedValues, coordinates, currentWeight);
+          } else {
+            // Hide comparison if weight >= 1
+            const comparisonContainer = document.getElementById('mapillary-weight-comparison');
+            if (comparisonContainer) {
+              comparisonContainer.style.display = 'none';
+            }
+          }
+        }
       }
       
       // Fit map to route
@@ -881,6 +1048,12 @@ export function clearRoute(map) {
       type: 'FeatureCollection',
       features: []
     });
+  }
+  
+  // Hide comparison
+  const comparisonContainer = document.getElementById('mapillary-weight-comparison');
+  if (comparisonContainer) {
+    comparisonContainer.style.display = 'none';
   }
   
   const startBtn = document.getElementById('set-start');

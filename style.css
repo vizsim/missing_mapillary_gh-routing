@@ -1287,6 +1287,68 @@ input[type="range"].slider::-moz-range-thumb,
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
+.mapillary-weight-comparison {
+  margin-top: 12px;
+  padding: 10px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.mapillary-weight-comparison .comparison-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mapillary-weight-comparison .comparison-label {
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.mapillary-weight-comparison .comparison-values {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mapillary-weight-comparison .comparison-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.mapillary-weight-comparison .comparison-item svg {
+  flex-shrink: 0;
+}
+
+.mapillary-weight-comparison .comparison-icon-combined {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mapillary-weight-comparison .comparison-icon-overlay {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: white;
+  border-radius: 50%;
+  padding: 1px;
+}
+
+.mapillary-weight-comparison .comparison-text {
+  color: #6b7280;
+  font-size: 11px;
+}
+
 .slider-value {
   font-size: 12px;
   font-weight: 600;
