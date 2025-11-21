@@ -265,16 +265,31 @@ export class Permalink {
     }
     
     // Load mapillary_weight (for car_customizable profile)
+    // Load profile first to know which default model to use
+    const profileParam = params.get('profile');
+    
     // Support both old 'custom_model' format (for backwards compatibility) and new 'mapillary_weight' format
     const mapillaryWeightParam = params.get('mapillary_weight');
     const customModelParam = params.get('custom_model'); // Legacy support
+    
+    // Determine which profile to use
+    let selectedProfile = 'car_customizable'; // default
+    if (profileParam) {
+      if (profileParam === 'car' && (mapillaryWeightParam || customModelParam)) {
+        selectedProfile = 'car_customizable';
+      } else {
+        selectedProfile = profileParam;
+      }
+    } else if (mapillaryWeightParam || customModelParam) {
+      selectedProfile = 'car_customizable';
+    }
     
     if (mapillaryWeightParam) {
       // New format: only mapillary_weight
       const weight = parseFloat(mapillaryWeightParam);
       if (!isNaN(weight)) {
-        // Ensure custom model is initialized
-        routeState.customModel = ensureCustomModel(routeState.customModel);
+        // Initialize custom model with correct profile
+        routeState.customModel = ensureCustomModel(null, selectedProfile);
         // Update mapillary priority
         routeState.customModel = updateMapillaryPriority(routeState.customModel, weight);
       }
@@ -293,41 +308,20 @@ export class Permalink {
       }
     }
     
-    // Load profile
-    const profileParam = params.get('profile');
-    if (profileParam) {
-      // If mapillary_weight or custom_model is present and profile is 'car', switch to 'car_customizable'
-      if (profileParam === 'car' && (mapillaryWeightParam || customModelParam)) {
-        routeState.selectedProfile = 'car_customizable';
-      } else {
-        routeState.selectedProfile = profileParam;
-      }
-      
-      // Ensure custom model is initialized if needed
-      if (supportsCustomModel(routeState.selectedProfile)) {
-        routeState.customModel = ensureCustomModel(routeState.customModel);
-      }
-      // Update UI
-      document.querySelectorAll('.profile-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.dataset.profile === routeState.selectedProfile) {
-          btn.classList.add('active');
-        }
-      });
-    } else if (mapillaryWeightParam || customModelParam) {
-      // If mapillary_weight or custom_model is present but no profile specified, use car_customizable
-      routeState.selectedProfile = 'car_customizable';
-      document.querySelectorAll('.profile-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.dataset.profile === 'car_customizable') {
-          btn.classList.add('active');
-        }
-      });
-    }
+    // Set profile
+    routeState.selectedProfile = selectedProfile;
     
-    // Set default custom model if car_customizable is selected but no custom model is set
+    // Update UI
+    document.querySelectorAll('.profile-btn').forEach(btn => {
+      btn.classList.remove('active');
+      if (btn.dataset.profile === routeState.selectedProfile) {
+        btn.classList.add('active');
+      }
+    });
+    
+    // Set default custom model if customizable profile is selected but no custom model is set
     if (supportsCustomModel(routeState.selectedProfile)) {
-      routeState.customModel = ensureCustomModel(routeState.customModel);
+      routeState.customModel = ensureCustomModel(routeState.customModel, routeState.selectedProfile);
     }
     
     // Initialize slider if car_customizable is selected

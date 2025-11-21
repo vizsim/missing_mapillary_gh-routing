@@ -688,6 +688,13 @@ export async function calculateRoute(map, start, end, waypoints = []) {
         routeState.customModel
       );
       
+      // Debug: Log the custom model being sent
+      console.log('🔍 Custom Model Debug:', {
+        profile: routeState.selectedProfile,
+        customModel: routeState.customModel,
+        requestBody: requestBody
+      });
+      
       try {
         response = await fetch(`${GRAPHHOPPER_URL}/route`, {
           method: 'POST',

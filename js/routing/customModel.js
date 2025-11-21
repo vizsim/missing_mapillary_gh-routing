@@ -1,49 +1,217 @@
 // Custom Model Management for car_customizable and bike_customizable profiles
 // Handles custom routing models for GraphHopper API
 
-// Default custom model configuration for car
+/**
+ * Default custom model configuration for car_customizable profile
+ * 
+ * ZWECK:
+ * Optimiert Autofahrten basierend auf:
+ * - Straßenklassen (bevorzugt Hauptstraßen)
+ * - Radinfrastruktur (sperrt Radwege)
+ * - Oberflächenqualität
+ * - Mapillary Coverage (anpassbar über Slider)
+ * 
+ * PRIORITY-REGELN:
+ * - Basis: 1.0 (keine Reduktion)
+ * - Hauptstraßen bevorzugen (MOTORWAY, TRUNK, PRIMARY)
+ * - Kleine Straßen abwerten (RESIDENTIAL, LIVING_STREET)
+ * - Schlechte Oberflächen abwerten
+ * - Mapillary Coverage bevorzugen (Standard 0.1, anpassbar)
+ */
 export const defaultCustomModel = {
   "distance_influence": 90,
   "priority": [
-    {"if": "road_class==MOTORWAY", "multiply_by": 1.0},
+    // Basis: Keine Reduktion
+    {"if": "true", "multiply_by": 1.0},
+    
+    // Fußwege, Wege, Treppen und Radwege sperren (Fallback für road_class)
     {"if": "road_class==FOOTWAY||road_class==PATH||road_class==STEPS||road_class==CYCLEWAY", "multiply_by": 0.0},
+    
+    // Hauptstraßen bevorzugen (höhere Priorität)
+    {"if": "road_class==MOTORWAY", "limit_to": 1.0},
+    {"if": "road_class==TRUNK", "limit_to": 0.95},
+    {"if": "road_class==PRIMARY", "limit_to": 0.9},
+    {"if": "road_class==SECONDARY", "limit_to": 0.85},
+    
+    // Kleine Straßen abwerten (weniger bevorzugt)
+    {"if": "road_class==RESIDENTIAL||road_class==LIVING_STREET", "multiply_by": 0.7},
+    {"if": "road_class==SERVICE", "multiply_by": 0.5},
+    
+    // Schlechte Oberflächen abwerten
+    {"if": "surface==SAND||surface==GRAVEL||surface==GROUND||surface==DIRT", "multiply_by": 0.8},
+    {"if": "surface==COBBLESTONE", "multiply_by": 0.9},
+    
+    // Mapillary coverage preference (can be adjusted via slider)
     {"if": "mapillary_coverage==true", "multiply_by": 0.1}
   ],
   "speed": [
+    // Basis: eingebaute Autogeschwindigkeit nutzen
     {"if": "true", "limit_to": "car_average_speed"},
+    // Generell um 20% reduzieren (z.B. für realistischere Geschwindigkeiten oder Sicherheitspuffer)
+    {"if": "true", "multiply_by": 0.8},
+    
+    // Access-Logik: Kein Autozugang = sperren
     {"if": "car_access==false", "limit_to": 0},
-    {"if": "mapillary_coverage==false", "multiply_by": 1.0}
+    
+    // Fußwege, Wege, Treppen und Radwege sperren
+    {"if": "road_class==FOOTWAY||road_class==PATH||road_class==STEPS||road_class==CYCLEWAY", "limit_to": 0},
+    
+    // Schlechte Oberflächen reduzieren Geschwindigkeit
+    {"if": "surface==SAND", "multiply_by": 0.6},
+    {"if": "surface==GRAVEL||surface==GROUND||surface==DIRT", "multiply_by": 0.8},
+    {"if": "surface==COBBLESTONE", "multiply_by": 0.9}
   ]
 };
 
-// Default custom model configuration for bike
+/**
+ * Default custom model configuration for bike_customizable profile
+ * 
+ * ZWECK:
+ * Dieses Custom Model optimiert Fahrradrouten für Touren-/Alltagsräder basierend auf:
+ * - Radinfrastruktur-Qualität (bicycle_infra)
+ * - Straßenklassen (road_class) für Wege ohne spezielle Radinfrastruktur
+ * - Oberflächenqualität (surface)
+ * - Steigungen (average_slope)
+ * - Mapillary Coverage (anpassbar über Slider)
+ * 
+ * WICHTIGE KONFIGURATION:
+ * - bike_average_speed muss in der GraphHopper-Konfiguration (config.yml) auf 25 km/h gesetzt werden
+ *   Beispiel: {"if": "true", "limit_to": 25} im bike profile
+ * 
+ * PRIORITY-REGELN (Reihenfolge ist wichtig!):
+ * 1. Basis: 0.8 (ermöglicht Multiplikatoren > 1.0 ohne über 1.0 zu gehen)
+ * 2. Access-Logik: Sperrt unzugängliche Wege
+ * 3. Bicycle Infrastructure: Priorisiert Wege basierend auf bicycle_infra (Score 3-10)
+ *    - Score 10 (CYCLEWAY_ISOLATED): 1.0 (höchste Priorität)
+ *    - Score 9: 0.95
+ *    - Score 8: 0.9
+ *    - Score 7: 0.85
+ *    - Score 6: 0.8
+ *    - Score 5: 0.7
+ *    - Score 4: 0.6
+ *    - Score 3: 0.5
+ * 4. Road Class (nur wenn bicycle_infra == NONE): Abwertung von Hauptstraßen
+ * 5. Oberflächen: Abwertung von schlechten Oberflächen
+ * 6. Mapillary Coverage: Standard 0.1 (anpassbar über Slider)
+ * 
+ * SPEED-REGELN:
+ * - Basis: bike_average_speed (25 km/h, in GraphHopper-Konfiguration gesetzt)
+ * - Steigungen: Reduziert Geschwindigkeit (0.25x bei sehr steil, 0.90x bei leicht)
+ * - Gefälle: Bleibt bei Basisgeschwindigkeit (1.0x)
+ * - Oberflächen: Zusätzliche Reduktion (Sand: 0.5x, Kopfsteinpflaster: 0.7x)
+ * 
+ * HINWEIS:
+ * - limit_to setzt nur Obergrenzen, keine Mindestgeschwindigkeiten
+ * - multiply_by kann nicht über 1.0 gehen (GraphHopper-Limitierung)
+ * - Reihenfolge der Regeln ist wichtig (werden sequenziell angewendet)
+ */
 export const defaultBikeCustomModel = {
-  "distance_influence": 90,
+  "distance_influence": 80,
   "priority": [
-    {"if": "road_class==MOTORWAY", "multiply_by": 0.0},
+    // Basis: Start mit einem mittleren Wert
+    {"if": "true", "multiply_by": 0.8},
+    
+    // Ungeeignete Wege für ein normales Touren-/Alltagsrad
+    {"if": "mtb_rating > 2", "multiply_by": 0},
+    {"if": "hike_rating > 1", "multiply_by": 0},
+    
+    // Access-Logik
+    {"if": "!bike_access && (!backward_bike_access || roundabout)", "multiply_by": 0},
+    {"else_if": "!bike_access && backward_bike_access && !roundabout", "multiply_by": 0.2},
+    
+    // Bicycle Infrastructure basierte Priorisierung (höchste Qualität zuerst)
+    // Score 10: Beste Option, komplett getrennt
+    {"if": "bicycle_infra == CYCLEWAY_ISOLATED", "limit_to": 1.0},
+    
+    // Score 9: Sehr hohe Qualität
+    {"if": "bicycle_infra == BICYCLE_ROAD", "limit_to": 0.95},
+    {"if": "bicycle_infra == CYCLEWAY_ADJOINING", "limit_to": 0.95},
+    {"if": "bicycle_infra == CYCLEWAY_ADJOINING_OR_ISOLATED", "limit_to": 0.95},
+    {"if": "bicycle_infra == CYCLEWAY_ON_HIGHWAY_PROTECTED", "limit_to": 0.95},
+    {"if": "bicycle_infra == FOOT_AND_CYCLEWAY_SEGREGATED_ISOLATED", "limit_to": 0.95},
+    
+    // Score 8: Hohe Qualität
+    {"if": "bicycle_infra == CYCLEWAY_LINK", "limit_to": 0.9},
+    {"if": "bicycle_infra == FOOT_AND_CYCLEWAY_SEGREGATED_ADJOINING", "limit_to": 0.9},
+    {"if": "bicycle_infra == FOOT_AND_CYCLEWAY_SEGREGATED_ADJOINING_OR_ISOLATED", "limit_to": 0.9},
+    
+    // Score 7: Gute Qualität
+    {"if": "bicycle_infra == BICYCLE_ROAD_VEHICLE_DESTINATION", "limit_to": 0.85},
+    {"if": "bicycle_infra == CYCLEWAY_ON_HIGHWAY_EXCLUSIVE", "limit_to": 0.85},
+    {"if": "bicycle_infra == FOOT_AND_CYCLEWAY_SHARED_ISOLATED", "limit_to": 0.85},
+    
+    // Score 6: Mittlere Qualität
+    {"if": "bicycle_infra == CYCLEWAY_ON_HIGHWAY_ADVISORY_OR_EXCLUSIVE", "limit_to": 0.8},
+    {"if": "bicycle_infra == FOOT_AND_CYCLEWAY_SHARED_ADJOINING", "limit_to": 0.8},
+    {"if": "bicycle_infra == FOOT_AND_CYCLEWAY_SHARED_ADJOINING_OR_ISOLATED", "limit_to": 0.8},
+    {"if": "bicycle_infra == FOOTWAY_BICYCLE_YES_ISOLATED", "limit_to": 0.8},
+    {"if": "bicycle_infra == SHARED_BUS_LANE_BIKE_WITH_BUS", "limit_to": 0.8},
+    
+    // Score 5: Niedrigere Qualität
+    {"if": "bicycle_infra == CYCLEWAY_ON_HIGHWAY_ADVISORY", "limit_to": 0.7},
+    {"if": "bicycle_infra == FOOTWAY_BICYCLE_YES_ADJOINING", "limit_to": 0.7},
+    {"if": "bicycle_infra == FOOTWAY_BICYCLE_YES_ADJOINING_OR_ISOLATED", "limit_to": 0.7},
+    {"if": "bicycle_infra == SHARED_BUS_LANE_BUS_WITH_BIKE", "limit_to": 0.7},
+    
+    // Score 4: Noch niedrigere Qualität
+    {"if": "bicycle_infra == CROSSING", "limit_to": 0.6},
+    {"if": "bicycle_infra == PEDESTRIAN_AREA_BICYCLE_YES", "limit_to": 0.6},
+    {"if": "bicycle_infra == SHARED_MOTOR_VEHICLE_LANE", "limit_to": 0.6},
+    
+    // Score 3: Niedrigste Qualität
+    {"if": "bicycle_infra == CYCLEWAY_ON_HIGHWAY_BETWEEN_LANES", "limit_to": 0.5},
+    
+    // Wenn bicycle_infra == NONE, dann road_class verwenden
+    {"if": "bicycle_infra == NONE && road_class == CYCLEWAY", "limit_to": 0.95},
+    {"if": "bicycle_infra == NONE && (road_class == LIVING_STREET || road_class == RESIDENTIAL)", "limit_to": 0.8},
+    {"if": "bicycle_infra == NONE && road_class == SECONDARY", "multiply_by": 0.45},
+    {"if": "bicycle_infra == NONE && road_class == PRIMARY", "multiply_by": 0.3},
+    {"if": "bicycle_infra == NONE && road_class == TRUNK", "multiply_by": 0.2},
+    {"if": "bicycle_infra == NONE && road_class == MOTORWAY", "multiply_by": 0},
+    
+    // Radnetze bevorzugen
+    {"if": "bike_network != OTHER", "limit_to": 0.9},
+    
+    // Oberflächenbewertung (für Touren-/Citybike optimiert)
+    {"if": "surface == GRAVEL || surface == FINE_GRAVEL || surface == COMPACTED", "multiply_by": 0.9},
+    {"if": "surface == GROUND || surface == DIRT", "multiply_by": 0.7},
+    {"if": "surface == SAND || surface == COBBLESTONE", "multiply_by": 0.4},
+    
+    // Mapillary coverage preference (can be adjusted via slider)
     {"if": "mapillary_coverage==true", "multiply_by": 0.1}
   ],
   "speed": [
-    {"if": "true", "limit_to": "bike_average_speed"},
-    {"if": "bike_access==false", "limit_to": 0},
-    {"if": "mapillary_coverage==false", "multiply_by": 1.0}
+    // Basis: eingebaute Fahrradgeschwindigkeit nutzen
+    {"if": "true", "limit_to": "bike_average_speed"},  // auf 25km/h gesettet
+    
+    // Gegen Einbahn -> nur Schrittgeschwindigkeit (Schieben)
+    {"if": "!bike_access && backward_bike_access && !roundabout", "limit_to": 5},
+    
+    // Treppen sehr langsam
+    {"if": "road_class == STEPS", "limit_to": 4},
+    
+    // Steigungs-basierte Geschwindigkeitsanpassungen
+    {"if": "average_slope >= 15", "multiply_by": 0.25},
+    {"else_if": "average_slope >= 10", "multiply_by": 0.40},
+    {"else_if": "average_slope >= 8", "multiply_by": 0.55},
+    {"else_if": "average_slope >= 6", "multiply_by": 0.70},
+    {"else_if": "average_slope >= 4", "multiply_by": 0.80},
+    {"else_if": "average_slope >= 2", "multiply_by": 0.90},
+    {"else_if": "average_slope <= -12", "multiply_by": 0.90},
+    {"else_if": "average_slope <= -8", "multiply_by": 1.0},
+    {"else_if": "average_slope <= -4", "multiply_by": 1.0},
+    {"else_if": "average_slope <= -2", "multiply_by": 1.00},
+    
+    // Oberflächen, die realistisch bremsen
+    {"if": "surface == SAND", "multiply_by": 0.5},
+    {"if": "surface == COBBLESTONE", "multiply_by": 0.7},
+    
+    // Access-Logik
+    {"if": "bike_access==false", "limit_to": 0}
   ]
 };
 
-// Test custom model (kept for reference)
-export const defaultCustomModel_tester = {
-  "distance_influence": 90,
-  "priority": [
-    {"if": "road_class==SECONDARY||road_class==PRIMARY||road_class==TRUNK", "multiply_by": 0.1},
-    {"if": "road_class==FOOTWAY||road_class==PATH||road_class==STEPS||road_class==CYCLEWAY", "multiply_by": 0.0},
-    {"if": "mapillary_coverage==false", "multiply_by": 0.1}
-  ],
-  "speed": [
-    {"if": "true", "limit_to": "car_average_speed"},
-    {"if": "car_access==false", "limit_to": 0},
-    {"if": "mapillary_coverage==false", "multiply_by": 1.0}
-  ]
-};
+
 
 // Check if a profile supports custom models
 export function supportsCustomModel(profile) {

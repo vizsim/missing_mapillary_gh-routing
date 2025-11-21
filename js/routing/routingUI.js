@@ -30,9 +30,13 @@ export function setupUIHandlers(map) {
       // Update selected profile
       routeState.selectedProfile = btn.dataset.profile;
       
-      // Set default custom model if customizable profile is selected and no custom model is set
+      // Reset and set default custom model if customizable profile is selected
       if (supportsCustomModel(routeState.selectedProfile)) {
+        routeState.customModel = null; // Reset to ensure correct model is loaded
         routeState.customModel = ensureCustomModel(routeState.customModel, routeState.selectedProfile);
+      } else {
+        // Clear custom model if switching to non-customizable profile
+        routeState.customModel = null;
       }
       
       // Show/hide customizable slider
