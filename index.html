@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+  <meta charset="utf-8" />
+  <title>custom graphhopper routing by vizim</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel='stylesheet' href='https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css' />
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div id="map"></div>
+
+  <!-- Routing Control Panel -->
+  <div class="routing-panel">
+    <div class="routing-header">
+      <div class="profile-selector">
+        <button class="profile-btn active" data-profile="car" title="Auto">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19.78 9.44L17.94 4.44C17.8238 4.09604 17.6036 3.79671 17.3097 3.5835C17.0159 3.37029 16.663 3.25374 16.3 3.25H7.7C7.3418 3.2508 6.99248 3.36151 6.6992 3.56716C6.40592 3.77281 6.18281 4.06351 6.06 4.4L4.22 9.4C3.92473 9.54131 3.67473 9.76216 3.49808 10.0377C3.32142 10.3133 3.22512 10.6327 3.22 10.96V15.46C3.21426 15.7525 3.28279 16.0417 3.41921 16.3006C3.55562 16.5594 3.75544 16.7794 4 16.94V17V19C4 19.2652 4.10536 19.5196 4.29289 19.7071C4.48043 19.8946 4.73478 20 5 20H6C6.26522 20 6.51957 19.8946 6.70711 19.7071C6.89464 19.5196 7 19.2652 7 19V17.25H17V19C17 19.2652 17.1054 19.5196 17.2929 19.7071C17.4804 19.8946 17.7348 20 18 20H19C19.2652 20 19.5196 19.8946 19.7071 19.7071C19.8946 19.5196 20 19.2652 20 19V17C20 17 20 17 20 16.94C20.2351 16.7808 20.4275 16.5661 20.56 16.315C20.6925 16.0639 20.7612 15.784 20.76 15.5V11C20.7567 10.6748 20.6634 10.3569 20.4904 10.0815C20.3174 9.80616 20.0715 9.58411 19.78 9.44ZM19.25 15.5C19.25 15.5663 19.2237 15.6299 19.1768 15.6768C19.1299 15.7237 19.0663 15.75 19 15.75H5C4.93369 15.75 4.87011 15.7237 4.82322 15.6768C4.77634 15.6299 4.75 15.5663 4.75 15.5V11C4.75 10.9337 4.77634 10.8701 4.82322 10.8232C4.87011 10.7763 4.93369 10.75 5 10.75H19C19.0663 10.75 19.1299 10.7763 19.1768 10.8232C19.2237 10.8701 19.25 10.9337 19.25 11V15.5ZM7.47 4.91C7.48797 4.86341 7.51949 4.82327 7.56048 4.79475C7.60147 4.76624 7.65007 4.75065 7.7 4.75H16.3C16.3499 4.75065 16.3985 4.76624 16.4395 4.79475C16.4805 4.82327 16.512 4.86341 16.53 4.91L17.93 8.75H6.07L7.47 4.91Z"/>
+            <path d="M8 14.75C8.82843 14.75 9.5 14.0784 9.5 13.25C9.5 12.4216 8.82843 11.75 8 11.75C7.17157 11.75 6.5 12.4216 6.5 13.25C6.5 14.0784 7.17157 14.75 8 14.75Z"/>
+            <path d="M16 14.75C16.8284 14.75 17.5 14.0784 17.5 13.25C17.5 12.4216 16.8284 11.75 16 11.75C15.1716 11.75 14.5 12.4216 14.5 13.25C14.5 14.0784 15.1716 14.75 16 14.75Z"/>
+          </svg>
+        </button>
+        <button class="profile-btn" data-profile="car_custom" title="Auto (Custom)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <!-- Car -->
+            <path d="M19.78 9.44L17.94 4.44C17.8238 4.09604 17.6036 3.79671 17.3097 3.5835C17.0159 3.37029 16.663 3.25374 16.3 3.25H7.7C7.3418 3.2508 6.99248 3.36151 6.6992 3.56716C6.40592 3.77281 6.18281 4.06351 6.06 4.4L4.22 9.4C3.92473 9.54131 3.67473 9.76216 3.49808 10.0377C3.32142 10.3133 3.22512 10.6327 3.22 10.96V15.46C3.21426 15.7525 3.28279 16.0417 3.41921 16.3006C3.55562 16.5594 3.75544 16.7794 4 16.94V17V19C4 19.2652 4.10536 19.5196 4.29289 19.7071C4.48043 19.8946 4.73478 20 5 20H6C6.26522 20 6.51957 19.8946 6.70711 19.7071C6.89464 19.5196 7 19.2652 7 19V17.25H17V19C17 19.2652 17.1054 19.5196 17.2929 19.7071C17.4804 19.8946 17.7348 20 18 20H19C19.2652 20 19.5196 19.8946 19.7071 19.7071C19.8946 19.5196 20 19.2652 20 19V17C20 17 20 17 20 16.94C20.2351 16.7808 20.4275 16.5661 20.56 16.315C20.6925 16.0639 20.7612 15.784 20.76 15.5V11C20.7567 10.6748 20.6634 10.3569 20.4904 10.0815C20.3174 9.80616 20.0715 9.58411 19.78 9.44ZM19.25 15.5C19.25 15.5663 19.2237 15.6299 19.1768 15.6768C19.1299 15.7237 19.0663 15.75 19 15.75H5C4.93369 15.75 4.87011 15.7237 4.82322 15.6768C4.77634 15.6299 4.75 15.5663 4.75 15.5V11C4.75 10.9337 4.77634 10.8701 4.82322 10.8232C4.87011 10.7763 4.93369 10.75 5 10.75H19C19.0663 10.75 19.1299 10.7763 19.1768 10.8232C19.2237 10.8701 19.25 10.9337 19.25 11V15.5ZM7.47 4.91C7.48797 4.86341 7.51949 4.82327 7.56048 4.79475C7.60147 4.76624 7.65007 4.75065 7.7 4.75H16.3C16.3499 4.75065 16.3985 4.76624 16.4395 4.79475C16.4805 4.82327 16.512 4.86341 16.53 4.91L17.93 8.75H6.07L7.47 4.91Z"/>
+            <path d="M8 14.75C8.82843 14.75 9.5 14.0784 9.5 13.25C9.5 12.4216 8.82843 11.75 8 11.75C7.17157 11.75 6.5 12.4216 6.5 13.25C6.5 14.0784 7.17157 14.75 8 14.75Z"/>
+            <path d="M16 14.75C16.8284 14.75 17.5 14.0784 17.5 13.25C17.5 12.4216 16.8284 11.75 16 11.75C15.1716 11.75 14.5 12.4216 14.5 13.25C14.5 14.0784 15.1716 14.75 16 14.75Z"/>
+            <!-- Camera icon overlay (top right) -->
+            <g transform="translate(11, 0)">
+              <rect x="0" y="0.5" width="9" height="6.5" rx="0.6" fill="white" stroke="currentColor" stroke-width="0.6"/>
+              <circle cx="4.5" cy="3.75" r="2" fill="currentColor"/>
+              <rect x="0.5" y="0.5" width="2.5" height="2" rx="0.4" fill="currentColor"/>
+            </g>
+          </svg>
+        </button>
+        <button class="profile-btn" data-profile="car_customizable" title="Auto (Anpassbar)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <!-- Car -->
+            <path d="M19.78 9.44L17.94 4.44C17.8238 4.09604 17.6036 3.79671 17.3097 3.5835C17.0159 3.37029 16.663 3.25374 16.3 3.25H7.7C7.3418 3.2508 6.99248 3.36151 6.6992 3.56716C6.40592 3.77281 6.18281 4.06351 6.06 4.4L4.22 9.4C3.92473 9.54131 3.67473 9.76216 3.49808 10.0377C3.32142 10.3133 3.22512 10.6327 3.22 10.96V15.46C3.21426 15.7525 3.28279 16.0417 3.41921 16.3006C3.55562 16.5594 3.75544 16.7794 4 16.94V17V19C4 19.2652 4.10536 19.5196 4.29289 19.7071C4.48043 19.8946 4.73478 20 5 20H6C6.26522 20 6.51957 19.8946 6.70711 19.7071C6.89464 19.5196 7 19.2652 7 19V17.25H17V19C17 19.2652 17.1054 19.5196 17.2929 19.7071C17.4804 19.8946 17.7348 20 18 20H19C19.2652 20 19.5196 19.8946 19.7071 19.7071C19.8946 19.5196 20 19.2652 20 19V17C20 17 20 17 20 16.94C20.2351 16.7808 20.4275 16.5661 20.56 16.315C20.6925 16.0639 20.7612 15.784 20.76 15.5V11C20.7567 10.6748 20.6634 10.3569 20.4904 10.0815C20.3174 9.80616 20.0715 9.58411 19.78 9.44ZM19.25 15.5C19.25 15.5663 19.2237 15.6299 19.1768 15.6768C19.1299 15.7237 19.0663 15.75 19 15.75H5C4.93369 15.75 4.87011 15.7237 4.82322 15.6768C4.77634 15.6299 4.75 15.5663 4.75 15.5V11C4.75 10.9337 4.77634 10.8701 4.82322 10.8232C4.87011 10.7763 4.93369 10.75 5 10.75H19C19.0663 10.75 19.1299 10.7763 19.1768 10.8232C19.2237 10.8701 19.25 10.9337 19.25 11V15.5ZM7.47 4.91C7.48797 4.86341 7.51949 4.82327 7.56048 4.79475C7.60147 4.76624 7.65007 4.75065 7.7 4.75H16.3C16.3499 4.75065 16.3985 4.76624 16.4395 4.79475C16.4805 4.82327 16.512 4.86341 16.53 4.91L17.93 8.75H6.07L7.47 4.91Z"/>
+            <path d="M8 14.75C8.82843 14.75 9.5 14.0784 9.5 13.25C9.5 12.4216 8.82843 11.75 8 11.75C7.17157 11.75 6.5 12.4216 6.5 13.25C6.5 14.0784 7.17157 14.75 8 14.75Z"/>
+            <path d="M16 14.75C16.8284 14.75 17.5 14.0784 17.5 13.25C17.5 12.4216 16.8284 11.75 16 11.75C15.1716 11.75 14.5 12.4216 14.5 13.25C14.5 14.0784 15.1716 14.75 16 14.75Z"/>
+            <!-- Camera icon overlay (top right) -->
+            <g transform="translate(11, 0)">
+              <rect x="0" y="0.5" width="9" height="6.5" rx="0.6" fill="white" stroke="currentColor" stroke-width="0.6"/>
+              <circle cx="4.5" cy="3.75" r="2" fill="currentColor"/>
+              <rect x="0.5" y="0.5" width="2.5" height="2" rx="0.4" fill="currentColor"/>
+            </g>
+            <!-- Gear icon overlay (top left) -->
+            <g transform="translate(0, 9) scale(0.9)">
+              <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z" fill="currentColor"/>
+              <circle cx="8" cy="8" r="2.929" fill="white"/>
+            </g>
+          </svg>
+        </button>
+        <button class="profile-btn" data-profile="bike" title="Fahrrad">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="5.5" cy="17.5" r="3.5"/>
+            <circle cx="18.5" cy="17.5" r="3.5"/>
+            <path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+            <path d="M12 17.5V14l-3-3 4-3 2 3h3"/>
+          </svg>
+        </button>
+        <button class="profile-btn" data-profile="my_bike_cycleways" title="Kinderfahrrad">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="5.5" cy="17.5" r="2.5"/>
+            <circle cx="18.5" cy="17.5" r="2.5"/>
+            <path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+            <path d="M12 17.5V14l-2.5-2.5 3-2 1.5 2h2"/>
+            <path d="M9 10h1"/>
+          </svg>
+        </button>
+        <button class="profile-btn" data-profile="cargo_bike" title="Lastenrad">
+          <svg width="20" height="20" viewBox="0 0 30 30" fill="currentColor">
+            <path d="M14 4 A 1.0001 1.0001 0 0 0 13.033203 5.2578125L16.697266 19L15.732422 19 A 2 2 0 0 0 14.304688 18.023438L8.8828125 10L10 10 A 1.0001 1.0001 0 1 0 10 8L7.1386719 8 A 1.0001 1.0001 0 0 0 6.8457031 8L6 8 A 1.0001 1.0001 0 1 0 6 10L6.46875 10L7.0117188 10.802734L5.5742188 15.115234C5.3727504 15.093484 5.2115442 15 5 15C3.4166671 15 2.1018922 15.629756 1.2519531 16.585938C0.40201405 17.542119 1.4802974e-16 18.777778 0 20C0 21.222222 0.40201404 22.457881 1.2519531 23.414062C2.1018922 24.370244 3.4166671 25 5 25C6.5833329 25 7.8981078 24.370244 8.7480469 23.414062C9.3627521 22.722519 9.6664109 21.873192 9.8300781 21L12.267578 21 A 2 2 0 0 0 14 22 A 2 2 0 0 0 15.728516 21L17.845703 21 A 1.0001 1.0001 0 0 0 18.164062 21L19.169922 21C19.333589 21.873192 19.637248 22.72252 20.251953 23.414062C21.101892 24.370244 22.416667 25 24 25C25.583333 25 26.898108 24.370244 27.748047 23.414062C28.421836 22.65605 28.803837 21.72117 28.9375 20.757812C29.567493 20.42121 30 19.764525 30 19L30 14.798828C30 14.331828 29.676703 13.927219 29.220703 13.824219L16.630859 10.982422L15.302734 6L17 6 A 1.0001 1.0001 0 1 0 17 4L14 4 z M 8.4238281 12.892578L12.408203 18.791016 A 2 2 0 0 0 12.271484 19L9.8300781 19C9.6664109 18.126808 9.3627521 17.277481 8.7480469 16.585938C8.4147953 16.211029 7.9583636 15.937843 7.4941406 15.681641L8.4238281 12.892578 z M 24 17C25.083333 17 25.768559 17.370244 26.251953 17.914062C26.735347 18.457881 27 19.222222 27 20C27 20.777778 26.735347 21.542119 26.251953 22.085938C25.768559 22.629756 25.083333 23 24 23C22.916667 23 22.231441 22.629756 21.748047 22.085938C21.272334 21.55076 21.019964 20.798142 21.011719 20.033203 A 1.0001 1.0001 0 0 0 21.011719 19.964844C21.020419 19.200578 21.272735 18.448789 21.748047 17.914062C22.231441 17.370245 22.916667 17 24 17 z M 4.9414062 17.011719L4.0507812 19.683594 A 1.0005644 1.0005644 0 1 0 5.9492188 20.316406L6.8476562 17.619141C6.9785252 17.721391 7.143618 17.792185 7.2519531 17.914062C7.7276662 18.44924 7.9800358 19.201858 7.9882812 19.966797 A 1.0001 1.0001 0 0 0 7.9882812 20.035156C7.9796133 20.79942 7.7272651 21.55121 7.2519531 22.085938C6.7685595 22.629756 6.0833326 23 5 23C3.9166674 23 3.2314405 22.629756 2.7480469 22.085938C2.2646532 21.542119 2 20.777778 2 20C2 19.222222 2.2646532 18.457881 2.7480469 17.914062C3.2209393 17.382058 3.8984121 17.027377 4.9414062 17.011719 z M 24 19 A 1 1 0 0 0 24 21 A 1 1 0 0 0 24 19 z"/>
+          </svg>
+        </button>
+      </div>
+      <button class="btn-close" id="collapse-routing-panel" title="Ein-/Ausklappen">
+        <svg width="16" height="16" viewBox="-20 -20 490 450" fill="currentColor">
+          <g transform="translate(32, 42.666667) rotate(180 225 200)">
+            <path d="M246.312928,5.62892705 C252.927596,9.40873724 258.409564,14.8907053 262.189374,21.5053731 L444.667042,340.84129 C456.358134,361.300701 449.250007,387.363834 428.790595,399.054926 C422.34376,402.738832 415.04715,404.676552 407.622001,404.676552 L42.6666667,404.676552 C19.1025173,404.676552 7.10542736e-15,385.574034 7.10542736e-15,362.009885 C7.10542736e-15,354.584736 1.93772021,347.288125 5.62162594,340.84129 L188.099293,21.5053731 C199.790385,1.04596203 225.853517,-6.06216498 246.312928,5.62892705 Z"/>
+          </g>
+        </svg>
+      </button>
+    </div>
+    
+    <div class="routing-content">
+      <div class="routing-input-group">
+        <div class="input-with-icon">
+          <div class="input-icon input-icon-start">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m9.9 16.97 7.436-7.436a8 8 0 0 0 2.145-3.89l.318-1.401-1.402.317a8 8 0 0 0-3.89 2.146L9.192 12.02m.707 4.95 2.122 3.535c1.178-1.178 2.828-2.828 0-5.657L9.899 16.97zm0 0-2.828-2.829m0 0L3.536 12.02c1.178-1.179 2.828-2.829 5.656 0m-2.12 2.121 2.12-2.121M4.95 16.263s-1.703 2.54-.707 3.536c.995.996 3.535-.707 3.535-.707"/>
+            </svg>
+          </div>
+          <div class="input-with-button">
+            <input type="text" id="start-input" placeholder="Adresse oder Koordinaten" />
+            <button id="set-start" class="btn-set-point btn-set-start" title="Startpunkt auf Karte setzen">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="routing-input-group">
+        <div class="input-with-icon">
+          <div class="input-icon input-icon-end">
+            <svg width="24" height="24" viewBox="0 0 32 32" fill="none" stroke="#ef4444" stroke-width="2" stroke-miterlimit="10">
+              <polyline points="6,28 6,5 26,5 26,19 6,19 "/>
+              <!-- 4 Quadrate: diagonal gegenüberliegende haben die gleiche Farbe -->
+              <!-- Oben links -->
+              <rect x="6" y="5" width="10" height="7" fill="#ef4444"/>
+              <!-- Oben rechts -->
+              <rect x="16" y="5" width="10" height="7"/>
+              <!-- Unten links -->
+              <rect x="6" y="12" width="10" height="7"/>
+              <!-- Unten rechts -->
+              <rect x="16" y="12" width="10" height="7" fill="#ef4444"/>
+              <!-- Umrisse für alle Quadrate -->
+              <rect x="6" y="5" width="10" height="7"/>
+              <rect x="16" y="5" width="10" height="7"/>
+              <rect x="6" y="12" width="10" height="7"/>
+              <rect x="16" y="12" width="10" height="7"/>
+            </svg>
+          </div>
+          <div class="input-with-button">
+            <input type="text" id="end-input" placeholder="Adresse oder Koordinaten" />
+            <button id="set-end" class="btn-set-point btn-set-end" title="Zielpunkt auf Karte setzen">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Waypoints section -->
+      <div class="routing-input-group">
+        <div class="input-with-icon">
+          <div class="input-icon input-icon-waypoint">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="16"></line>
+              <line x1="8" y1="12" x2="16" y2="12"></line>
+            </svg>
+          </div>
+          <div class="input-with-button">
+            <div class="waypoints-header-field">
+              <span>Zwischenpunkte</span>
+            </div>
+            <button id="add-waypoint" class="btn-add-waypoint" title="Zwischenpunkt hinzufügen">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Waypoints list container -->
+      <div id="waypoints-container" class="waypoints-container">
+        <div id="waypoints-list" class="waypoints-list"></div>
+      </div>
+      
+      <div class="routing-buttons">
+        <button id="calculate-route" class="btn-primary">Route berechnen</button>
+        <button id="hide-route" class="btn-icon" title="Ausblenden/Einblenden">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
+        <button id="export-gpx" class="btn-icon" title="GPX exportieren" style="display: none;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+        </button>
+        <button id="clear-route" class="btn-icon" title="Löschen">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <line x1="10" y1="11" x2="10" y2="17"></line>
+            <line x1="14" y1="11" x2="14" y2="17"></line>
+          </svg>
+        </button>
+      </div>
+      
+      <div id="customizable-slider-container" class="customizable-slider-container" style="display: none;">
+        <label for="mapillary-priority-slider" class="slider-label">Mapillary Weight:</label>
+        <input type="range" id="mapillary-priority-slider" class="slider" min="0" max="9" step="1" value="3">
+        <span id="slider-value" class="slider-value">0.1</span>
+      </div>
+      
+      <div id="route-info" class="route-info"></div>
+      <div id="heightgraph-container" class="heightgraph-container" style="display: none;">
+        <div class="heightgraph-header">
+          <span>Höhenprofil</span>
+          <select id="heightgraph-encoded-select" class="heightgraph-select">
+            <option value="mapillary_coverage">Mapillary Coverage</option>
+            <option value="surface">Surface</option>
+            <option value="road_class">Road Class</option>
+            <option value="bicycle_infra">Bicycle Infrastructure</option>
+          </select>
+        </div>
+        <div style="position: relative;">
+          <canvas id="heightgraph-canvas"></canvas>
+          <canvas id="heightgraph-indicator-canvas" style="position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
+        </div>
+        <div id="heightgraph-stats" class="heightgraph-stats"></div>
+      </div>
+      
+      <div class="github-links">
+        <img src="https://img.shields.io/badge/Status-Experimental-red" alt="Status: Experimental" class="status-badge">
+        <div style="flex: 1;"></div>
+        <a href="https://github.com/vizsim/maplibre_routing" target="_blank" rel="noopener noreferrer" 
+           title="GitHub Repository" 
+           class="github-link">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+          </svg>
+        </a>
+        <a href="https://github.com/vizsim/maplibre_routing/issues" target="_blank" rel="noopener noreferrer" 
+           title="Fehler melden oder Feedback geben"
+           class="github-link">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/>
+            <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Z"/>
+          </svg>
+          <span>Issues</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Context Panel: Combined -->
+  <div class="context-panel">
+    <div class="context-header">
+      <div class="context-title">
+        <span>Kontext-Layer</span>
+      </div>
+      <button class="btn-close" id="collapse-context-panel" title="Ein-/Ausklappen">
+        <svg width="16" height="16" viewBox="-20 -20 490 450" fill="currentColor">
+          <g transform="translate(32, 42.666667) rotate(180 225 200)">
+            <path d="M246.312928,5.62892705 C252.927596,9.40873724 258.409564,14.8907053 262.189374,21.5053731 L444.667042,340.84129 C456.358134,361.300701 449.250007,387.363834 428.790595,399.054926 C422.34376,402.738832 415.04715,404.676552 407.622001,404.676552 L42.6666667,404.676552 C19.1025173,404.676552 7.10542736e-15,385.574034 7.10542736e-15,362.009885 C7.10542736e-15,354.584736 1.93772021,347.288125 5.62162594,340.84129 L188.099293,21.5053731 C199.790385,1.04596203 225.853517,-6.06216498 246.312928,5.62892705 Z"/>
+          </g>
+        </svg>
+      </button>
+    </div>
+    
+    <div class="context-content">
+      <!-- Missing Streets Segment -->
+      <div class="context-segment">
+        <div class="context-segment-header" id="toggle-missing-streets-segment">
+          <div class="context-segment-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="context-icon">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+              <circle cx="12" cy="13" r="4"></circle>
+            </svg>
+            <span>Straßensegmente mit...</span>
+            <span class="info-icon-small" title="Quelle: OSM Mapillary Missing Streets; tilda-geo.de">ⓘ</span>
+          </div>
+          <label class="switch-toggle">
+            <input type="checkbox" id="toggle-missing-streets" />
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+        
+        <div class="context-segment-content collapsed" id="missing-streets-segment-content">
+          <div class="bikelanes-legend" id="missing-streets-legend">
+            <div class="legend-item">
+              <span class="legend-line solid" style="background: #174ed9;"></span>
+              <span class="legend-text">...ausreichend Panorama-Fotos</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-line solid" style="background: #0098f0;"></span>
+              <span class="legend-text">...ausreichend regulären Fotos</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-line solid" style="background: #e91e63;"></span>
+              <span class="legend-text">...fehlenden Fotos</span>
+            </div>
+            
+            <div class="context-footer">
+              <span>Mehr auf 
+                <a href="https://www.osm-verkehrswende.org/mapillary/map/" target="_blank" rel="noopener">osm-verkehrswende.org</a>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bike Lanes Segment -->
+      <div class="context-segment">
+        <div class="context-segment-header" id="toggle-bikelanes-segment">
+          <div class="context-segment-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="context-icon">
+              <circle cx="5.5" cy="17.5" r="3.5"/>
+              <circle cx="18.5" cy="17.5" r="3.5"/>
+              <path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+              <path d="M12 17.5V14l-3-3 4-3 2 3h3"/>
+            </svg>
+            <span>Radinfrastruktur</span>
+            <span class="info-icon-small" title="Quelle: © OpenStreetMap; tilda-geo.de">ⓘ</span>
+          </div>
+          <label class="switch-toggle">
+            <input type="checkbox" id="toggle-bikelanes" />
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+        
+        <div class="context-segment-content collapsed" id="bikelanes-segment-content">
+          <div class="bikelanes-legend" id="bikelanes-legend">
+            <div class="legend-item">
+              <span class="legend-line solid" style="background: #174ed9;"></span>
+              <span class="legend-text">Führung baul. abgesetzt von Kfz</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-line solid" style="background: #0098f0;"></span>
+              <span class="legend-text">Führung eigenständig auf Fahrbahn</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-line dashed" style="--line-color: #174ed9;"></span>
+              <span class="legend-text">Führung mit Fußverkehr</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-line dashed" style="--line-color: #9fb9f9;"></span>
+              <span class="legend-text">Fußverkehr mit Rad frei</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-line dashed" style="--line-color: #0098f0;"></span>
+              <span class="legend-text">Führung mit Kfz (explizit)</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-line dashed" style="--line-color: #a97bea;"></span>
+              <span class="legend-text">Führungsform unklar</span>
+            </div>
+            
+            <div class="context-footer">
+              <span>Mehr auf 
+                <a href="https://tilda-geo.de/regionen/radinfra" target="_blank" rel="noopener">radinfra.de</a>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Left UI Container -->
+  <div id="bottom-left-ui-container">
+    <div id="custom-nav-control"></div>
+
+    <!-- Map Settings Menu -->
+    <div id="map-settings-menu">
+      <button id="map-settings-toggle" class="map-settings-btn" title="Karten-Einstellungen">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" fill-rule="nonzero">
+          <path d="M20.0256266,12.1919251 C19.8772338,12.4293536 19.6806426,12.6329794 19.4485757,12.7896246 L13.3986821,16.8733027 C12.5534904,17.4438072 11.4465096,17.4438072 10.6013179,16.8733027 L4.55142428,12.7896246 C3.79043588,12.2759574 3.49533538,11.3303569 3.77229147,10.5 L10.6132495,15.0595795 C11.4005138,15.5844224 12.4112447,15.617225 13.2264422,15.1579876 L13.3867505,15.0595795 L20.2270621,10.4994959 C20.4087649,11.0456562 20.3545192,11.665697 20.0256266,12.1919251 Z M20.2270621,13.7494959 C20.4087649,14.2956562 20.3545192,14.915697 20.0256266,15.4419251 C19.8772338,15.6793536 19.6806426,15.8829794 19.4485757,16.0396246 L13.3986821,20.1233027 C12.5534904,20.6938072 11.4465096,20.6938072 10.6013179,20.1233027 L4.55142428,16.0396246 C3.79043588,15.5259574 3.49533538,14.5803569 3.77229147,13.75 L10.6132495,18.3095795 C11.4005138,18.8344224 12.4112447,18.867225 13.2264422,18.4079876 L13.3867505,18.3095795 L20.2270621,13.7494959 Z M13.3867505,3.42450033 L19.7519246,7.66794971 C20.2114532,7.97430216 20.3356271,8.59517151 20.0292747,9.0547002 C19.9560398,9.16455248 19.8617768,9.25881544 19.7519246,9.33205029 L13.3867505,13.5754997 C12.547002,14.135332 11.452998,14.135332 10.6132495,13.5754997 L4.24807544,9.33205029 C3.78854675,9.02569784 3.66437288,8.40482849 3.97072534,7.9452998 C4.0439602,7.83544752 4.13822315,7.74118456 4.24807544,7.66794971 L10.6132495,3.42450033 C11.452998,2.86466797 12.547002,2.86466797 13.3867505,3.42450033 Z M11.560754,4.60622527 L11.4452998,4.67257577 L5.705,8.5 L11.4452998,12.3274242 C11.7438771,12.5264757 12.1228116,12.5485926 12.439246,12.3937747 L12.5547002,12.3274242 L18.294,8.5 L12.5547002,4.67257577 C12.2561229,4.47352427 11.8771884,4.45140743 11.560754,4.60622527 Z"/>
+        </svg>
+      </button>
+      
+      <div id="map-settings-panel" class="map-settings-panel hidden">
+        <div class="map-settings-section">
+          <div class="map-settings-label">Kartenstil</div>
+          <div class="basemap-buttons">
+            <button class="basemap-btn selected" data-map="standard" title="Standard"></button>
+            <button class="basemap-btn" data-map="satellite" title="Satellit"></button>
+          </div>
+        </div>
+        
+        <div class="map-settings-divider"></div>
+        
+        <div class="map-settings-section">
+          <div class="map-settings-label">Ansicht</div>
+          <div class="switch-control">
+            <div class="switch-label" title="MapTiler Terrain Daten">
+              <span>Terrain</span>
+              <label class="switch">
+                <input type="checkbox" id="toggleTerrain" />
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+            <div class="switch-label" title="MapTiler Hillshade Daten">
+              <span>Hillshade</span>
+              <label class="switch">
+                <input type="checkbox" id="toggleHillshade" />
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attribution Footer
+  <div id="attribution-footer" style="position: absolute; bottom: 80px; left: 10px; background: rgba(255, 255, 255, 0.9); padding: 8px 12px; border-radius: 4px; font-size: 11px; z-index: 1; font-family: sans-serif; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    Höhenmodelle: <a href="https://sonny.4lima.de" target="_blank" rel="noopener">Sonny</a> (CC BY 4.0)
+  </div> -->
+
+  <script src="https://unpkg.com/maplibre-gl@5.9.0/dist/maplibre-gl.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/pmtiles@4.3.0/dist/pmtiles.js"></script>
+  <script type="module" src="./main.js"></script>
+</body>
+
+</html>
