@@ -1330,16 +1330,16 @@ input[type="range"].slider::-moz-range-thumb,
 .mapillary-weight-comparison .comparison-values {
   display: flex;
   flex-direction: row;
-  gap: 12px;
+  gap: 6px;
   flex-wrap: wrap;
   align-items: center;
 }
 
 .mapillary-weight-comparison .comparison-label {
   color: #6b7280;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 500;
-  margin-right: 4px;
+  margin-right: 0px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -1349,7 +1349,7 @@ input[type="range"].slider::-moz-range-thumb,
 .mapillary-weight-comparison .comparison-item {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 3px;
   color: #6b7280;
   font-size: 11px;
 }

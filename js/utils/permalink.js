@@ -273,7 +273,7 @@ export class Permalink {
     const customModelParam = params.get('custom_model'); // Legacy support
     
     // Determine which profile to use
-    let selectedProfile = 'car_customizable'; // default
+    let selectedProfile = 'bike_customizable'; // default
     if (profileParam) {
       if (profileParam === 'car' && (mapillaryWeightParam || customModelParam)) {
         selectedProfile = 'car_customizable';
@@ -281,7 +281,7 @@ export class Permalink {
         selectedProfile = profileParam;
       }
     } else if (mapillaryWeightParam || customModelParam) {
-      selectedProfile = 'car_customizable';
+      selectedProfile = 'bike_customizable';
     }
     
     if (mapillaryWeightParam) {

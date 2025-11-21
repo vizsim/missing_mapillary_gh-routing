@@ -15,8 +15,8 @@ import {
 } from './customModel.js';
 import { calculateDistance } from './heightgraph/heightgraphUtils.js';
 
-const GRAPHHOPPER_URL = 'http://localhost:8989';
-//const GRAPHHOPPER_URL = 'https://ghroute.duckdns.org';
+//const GRAPHHOPPER_URL = 'http://localhost:8989';
+const GRAPHHOPPER_URL = 'https://ghroute.duckdns.org';
 
 // Flag to prevent parallel route calculations
 let routeCalculationInProgress = false;
