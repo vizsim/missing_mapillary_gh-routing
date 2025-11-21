@@ -1239,17 +1239,44 @@ code {
 
 .customizable-slider-container {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 0;
+  padding: 10px 12px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.customizable-slider-container .slider-section {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  padding: 8px 0;
   width: 100%;
+}
+
+.customizable-slider-container .slider-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.customizable-slider-container .slider-label {
+  min-width: auto;
+  flex-shrink: 0;
+}
+
+.customizable-slider-container .slider-value {
+  flex-shrink: 0;
+  text-align: right;
 }
 
 .slider-label {
   font-size: 12px;
   color: #6b7280;
   white-space: nowrap;
-  min-width: 100px;
+  min-width: auto;
 }
 
 input[type="range"].slider,
@@ -1288,37 +1315,41 @@ input[type="range"].slider::-moz-range-thumb,
 }
 
 .mapillary-weight-comparison {
-  margin-top: 12px;
-  padding: 10px;
-  background: #f3f4f6;
-  border-radius: 6px;
-  font-size: 12px;
-  line-height: 1.6;
+  margin-top: 10px;
+  padding-top: 10px;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
-.mapillary-weight-comparison .comparison-info {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.mapillary-weight-comparison .comparison-label {
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 4px;
+.mapillary-weight-comparison .comparison-divider {
+  height: 1px;
+  background: #d1d5db;
+  margin-bottom: 10px;
 }
 
 .mapillary-weight-comparison .comparison-values {
   display: flex;
   flex-direction: row;
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.mapillary-weight-comparison .comparison-label {
+  color: #6b7280;
+  font-size: 9px;
+  font-weight: 500;
+  margin-right: 4px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
 }
 
 .mapillary-weight-comparison .comparison-item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   color: #6b7280;
   font-size: 11px;
 }
@@ -1348,6 +1379,7 @@ input[type="range"].slider::-moz-range-thumb,
 .mapillary-weight-comparison .comparison-text {
   color: #6b7280;
   font-size: 11px;
+  white-space: nowrap;
 }
 
 .slider-value {
