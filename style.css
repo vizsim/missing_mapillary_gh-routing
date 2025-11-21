@@ -1310,8 +1310,9 @@ input[type="range"].slider::-moz-range-thumb,
 
 .mapillary-weight-comparison .comparison-values {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .mapillary-weight-comparison .comparison-item {

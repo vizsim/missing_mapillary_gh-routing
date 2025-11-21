@@ -70,8 +70,8 @@ async function calculateComparisonWithWeightOne(map, allPoints, currentPath, cur
         comparisonCoordinates = comparisonPath.points.geometry.coordinates;
       }
       
-      // Extract encoded values from comparison route
-      const comparisonEncodedValues = extractEncodedValues(comparisonPath, comparisonCoordinates);
+      // Extract encoded values from comparison route using the same logic as main route
+      const comparisonEncodedValues = extractEncodedValuesFull(comparisonPath, comparisonCoordinates);
       
       // Calculate mapillary_coverage distance for comparison route
       const comparisonMapillaryDistance = calculateMapillaryCoverageDistance(comparisonCoordinates, comparisonEncodedValues);
@@ -91,7 +91,7 @@ async function calculateComparisonWithWeightOne(map, allPoints, currentPath, cur
   }
 }
 
-// Calculate distance of segments with mapillary_coverage==true
+// Calculate distance of segments with mapillary_coverage==false
 // A segment goes from point i to point i+1, and the value belongs to point i
 function calculateMapillaryCoverageDistance(coordinates, encodedValues) {
   if (!coordinates || coordinates.length < 2 || !encodedValues || !encodedValues.mapillary_coverage) {
@@ -104,11 +104,12 @@ function calculateMapillaryCoverageDistance(coordinates, encodedValues) {
   // Iterate over segments: segment i goes from point i to point i+1
   // The mapillary_coverage value at point i applies to this segment
   for (let i = 0; i < coordinates.length - 1; i++) {
-    // Check if the segment has mapillary_coverage==true
-    // Accept both true and 1 as valid coverage values
-    const hasCoverage = mapillaryCoverage[i] === true || mapillaryCoverage[i] === 1;
+    // Check if the segment has mapillary_coverage==false
+    // Accept both false and 0 as valid "no coverage" values
+    const hasNoCoverage = mapillaryCoverage[i] === false || mapillaryCoverage[i] === 0 || 
+                          mapillaryCoverage[i] === null || mapillaryCoverage[i] === undefined;
     
-    if (hasCoverage) {
+    if (hasNoCoverage) {
       // Calculate segment distance using Haversine formula
       const segmentDist = calculateDistance(coordinates[i], coordinates[i + 1]);
       totalDistance += segmentDist;
@@ -118,8 +119,108 @@ function calculateMapillaryCoverageDistance(coordinates, encodedValues) {
   return totalDistance;
 }
 
+// Extract encoded values using the same full logic as main route calculation
+// This ensures mapillary_coverage is extracted correctly from both details and instructions
+function extractEncodedValuesFull(path, coordinates) {
+  const encodedValues = {};
+  
+  // Helper function to map detail arrays to coordinate arrays
+  const mapDetailsToCoordinates = (detailArray, coordinatesLength) => {
+    if (!detailArray || !Array.isArray(detailArray)) return null;
+    
+    const result = new Array(coordinatesLength).fill(null);
+    detailArray.forEach(([startIdx, endIdx, value]) => {
+      if (typeof startIdx === 'number' && typeof endIdx === 'number') {
+        for (let i = startIdx; i <= endIdx && i < coordinatesLength; i++) {
+          result[i] = value;
+        }
+      }
+    });
+    return result;
+  };
+  
+  // Extract from path.details
+  if (path.details && Object.keys(path.details).length > 0) {
+    Object.keys(path.details).forEach(detailKey => {
+      const detailArray = path.details[detailKey];
+      if (Array.isArray(detailArray) && detailArray.length > 0) {
+        encodedValues[detailKey] = mapDetailsToCoordinates(detailArray, coordinates.length);
+      }
+    });
+    
+    // Also check for time and distance in details (if available)
+    if (path.details.time) {
+      encodedValues.time = mapDetailsToCoordinates(path.details.time, coordinates.length);
+    }
+    if (path.details.distance) {
+      encodedValues.distance = mapDetailsToCoordinates(path.details.distance, coordinates.length);
+    }
+  }
+  
+  // Extract data from instructions - they contain per-segment information
+  if (path.instructions && path.instructions.length > 0) {
+    // Map instruction data to coordinates using intervals
+    const timeArray = new Array(coordinates.length).fill(0);
+    const distanceArray = new Array(coordinates.length).fill(0);
+    const streetNameArray = new Array(coordinates.length).fill('');
+    const customPresentArray = new Array(coordinates.length).fill(null);
+    
+    const osmWayIdArray = new Array(coordinates.length).fill(null);
+    
+    path.instructions.forEach((inst) => {
+      if (inst.interval && Array.isArray(inst.interval) && inst.interval.length === 2) {
+        const [startIdx, endIdx] = inst.interval;
+        // Fill the interval with instruction values
+        for (let i = startIdx; i <= endIdx && i < coordinates.length; i++) {
+          timeArray[i] = inst.time || 0;
+          distanceArray[i] = inst.distance || 0;
+          streetNameArray[i] = inst.street_name || '';
+          // Check if mapillary_coverage is in instruction
+          if (inst.mapillary_coverage !== undefined) {
+            customPresentArray[i] = inst.mapillary_coverage;
+          }
+          // Extract osm_way_id from instruction if available
+          if (inst.osm_way_id !== undefined) {
+            osmWayIdArray[i] = inst.osm_way_id;
+          }
+        }
+      }
+    });
+    
+    // Also check osm_way_id in details
+    if (path.details && path.details.osm_way_id) {
+      const osmWayIdDetails = mapDetailsToCoordinates(path.details.osm_way_id, coordinates.length);
+      for (let i = 0; i < coordinates.length; i++) {
+        if (osmWayIdDetails[i] !== null && osmWayIdArray[i] === null) {
+          osmWayIdArray[i] = osmWayIdDetails[i];
+        }
+      }
+    }
+    
+    // Store OSM way IDs if available
+    if (osmWayIdArray.some(id => id !== null)) {
+      encodedValues.osm_way_id = osmWayIdArray;
+    }
+    
+    // Store as encoded values
+    encodedValues.time = timeArray;
+    encodedValues.distance = distanceArray;
+    encodedValues.street_name = streetNameArray;
+    // Only set mapillary_coverage if we have values
+    if (customPresentArray.some(v => v !== null)) {
+      encodedValues.mapillary_coverage = customPresentArray;
+    }
+  }
+  
+  return encodedValues;
+}
+
 // Display comparison results
-function displayComparison(distanceDiff, timeDiff, mapillaryDistanceDiff) {
+function displayComparison(
+  distanceDiff, 
+  timeDiff, 
+  mapillaryDistanceDiff
+) {
   const comparisonContainer = document.getElementById('mapillary-weight-comparison');
   if (!comparisonContainer) return;
   
