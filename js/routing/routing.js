@@ -12,8 +12,8 @@ import {
   buildPostRequestBodyWithCustomModel
 } from './customModel.js';
 
-// const GRAPHHOPPER_URL = 'http://localhost:8989';
-const GRAPHHOPPER_URL = 'https://ghroute.duckdns.org';
+const GRAPHHOPPER_URL = 'http://localhost:8989';
+//const GRAPHHOPPER_URL = 'https://ghroute.duckdns.org';
 
 // Flag to prevent parallel route calculations
 let routeCalculationInProgress = false;
@@ -50,7 +50,7 @@ function buildGetRequestUrl(points, profileParam) {
   // Build point parameters: point=lat,lng&point=lat,lng&...
   const pointParams = points.map(p => `point=${p[1]},${p[0]}`).join('&');
   const baseUrl = `${GRAPHHOPPER_URL}/route?${pointParams}&profile=${profileParam}&points_encoded=false&elevation=true`;
-  const chDisableParam = profileParam === 'car' ? '&ch.disable=true' : '';
+  const chDisableParam = (profileParam === 'car' || profileParam === 'bike') ? '&ch.disable=true' : '';
   const detailsParams = ['surface', 'mapillary_coverage', 'road_class', 'road_access', 'bicycle_infra', 'osm_way_id']
     .map(d => `details=${d}`)
     .join('&');
@@ -419,7 +419,7 @@ export async function calculateRoute(map, start, end, waypoints = []) {
     
     // Ensure custom model is initialized if needed
     if (supportsCustomModel(routeState.selectedProfile)) {
-      routeState.customModel = ensureCustomModel(routeState.customModel);
+      routeState.customModel = ensureCustomModel(routeState.customModel, routeState.selectedProfile);
     }
     
     // Fetch route from GraphHopper API

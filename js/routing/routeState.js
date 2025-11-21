@@ -23,9 +23,9 @@ export const routeState = {
   isSelectingWaypoint: false,
   
   // Profile
-  selectedProfile: 'car',
+  selectedProfile: 'car_customizable',
   
-  // Custom model for car_customizable profile
+  // Custom model for car_customizable and bike_customizable profiles
   customModel: null,
   
   // Default custom model (imported from customModel.js)

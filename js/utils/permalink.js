@@ -130,7 +130,7 @@ export class Permalink {
     });
     
     // Profile
-    if (routeState.selectedProfile && routeState.selectedProfile !== 'car') {
+    if (routeState.selectedProfile && routeState.selectedProfile !== 'car_customizable') {
       paramParts.push(`profile=${encodeURIComponent(routeState.selectedProfile)}`);
     }
     
@@ -512,7 +512,7 @@ export class Permalink {
       paramParts.push(`waypoint=${Math.round(lat * 10000) / 10000}/${Math.round(lng * 10000) / 10000}`);
     });
     
-    if (routeState.selectedProfile && routeState.selectedProfile !== 'car') {
+    if (routeState.selectedProfile && routeState.selectedProfile !== 'car_customizable') {
       paramParts.push(`profile=${encodeURIComponent(routeState.selectedProfile)}`);
     }
     

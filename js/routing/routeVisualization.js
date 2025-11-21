@@ -345,14 +345,8 @@ export function updateRouteColor(encodedType, encodedValues) {
 
 export function updateRouteColorByProfile(map, profile) {
   const colorMap = {
-    'car': '#3b82f6',
-    'car_custom': '#8b5cf6',
     'car_customizable': '#6366f1',
-    'bike': '#10b981',
-    'my_bike_cycleways': '#f59e0b',
-    'cargo_bike': '#ef4444',
-    'racingbike': '#06b6d4',
-    'mtb': '#ec4899'
+    'bike_customizable': '#10b981'
   };
 
   const color = colorMap[profile] || '#3b82f6';

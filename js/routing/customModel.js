@@ -1,7 +1,7 @@
-// Custom Model Management for car_customizable profile
+// Custom Model Management for car_customizable and bike_customizable profiles
 // Handles custom routing models for GraphHopper API
 
-// Default custom model configuration
+// Default custom model configuration for car
 export const defaultCustomModel = {
   "distance_influence": 90,
   "priority": [
@@ -12,6 +12,20 @@ export const defaultCustomModel = {
   "speed": [
     {"if": "true", "limit_to": "car_average_speed"},
     {"if": "car_access==false", "limit_to": 0},
+    {"if": "mapillary_coverage==false", "multiply_by": 1.0}
+  ]
+};
+
+// Default custom model configuration for bike
+export const defaultBikeCustomModel = {
+  "distance_influence": 90,
+  "priority": [
+    {"if": "road_class==MOTORWAY", "multiply_by": 0.0},
+    {"if": "mapillary_coverage==true", "multiply_by": 0.1}
+  ],
+  "speed": [
+    {"if": "true", "limit_to": "bike_average_speed"},
+    {"if": "bike_access==false", "limit_to": 0},
     {"if": "mapillary_coverage==false", "multiply_by": 1.0}
   ]
 };
@@ -33,25 +47,31 @@ export const defaultCustomModel_tester = {
 
 // Check if a profile supports custom models
 export function supportsCustomModel(profile) {
-  return profile === 'car_customizable';
+  return profile === 'car_customizable' || profile === 'bike_customizable';
 }
 
-// Get the actual GraphHopper profile name (car_customizable -> car)
+// Get the actual GraphHopper profile name (car_customizable -> car, bike_customizable -> bike)
 export function getGraphHopperProfile(profile) {
-  return profile === 'car_customizable' ? 'car' : profile;
+  if (profile === 'car_customizable') return 'car';
+  if (profile === 'bike_customizable') return 'bike';
+  return profile;
 }
 
 // Initialize custom model if needed
-export function ensureCustomModel(customModel) {
+export function ensureCustomModel(customModel, profile = 'car_customizable') {
   if (!customModel) {
+    if (profile === 'bike_customizable') {
+      return JSON.parse(JSON.stringify(defaultBikeCustomModel));
+    }
     return JSON.parse(JSON.stringify(defaultCustomModel));
   }
   return customModel;
 }
 
 // Check if custom model differs from default
-export function isDefaultCustomModel(customModel) {
-  return JSON.stringify(customModel) === JSON.stringify(defaultCustomModel);
+export function isDefaultCustomModel(customModel, profile = 'car_customizable') {
+  const defaultModel = profile === 'bike_customizable' ? defaultBikeCustomModel : defaultCustomModel;
+  return JSON.stringify(customModel) === JSON.stringify(defaultModel);
 }
 
 // Build POST request body with custom model
@@ -69,6 +89,10 @@ export function buildPostRequestBodyWithCustomModel(points, profile, customModel
   
   // Add ch.disable for car profile (LM routing)
   if (graphHopperProfile === 'car') {
+    requestBody['ch.disable'] = true;
+  }
+  // Add ch.disable for bike profile (LM routing)
+  if (graphHopperProfile === 'bike') {
     requestBody['ch.disable'] = true;
   }
   
