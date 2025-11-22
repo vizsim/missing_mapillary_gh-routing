@@ -1,20 +1,20 @@
-# MapLibre GraphHopper Routing
+# Missing Mapillary GraphHopper Routing
 
-**Proof of Concept** - Eine interaktive Web-Anwendung für Routenplanung mit GraphHopper-Integration, Höhenprofil-Visualisierung und Kontext-Layern für Radinfrastruktur und Mapillary-Abdeckung.
-
-> ⚠️ Dieses Repository dient als **Template** für weitere Projekte. Siehe [Verwendung als Template](#verwendung-als-template) für mehr Informationen.
+**Proof of Concept** - Eine interaktive Web-Anwendung für Routenplanung mit GraphHopper-Integration, speziell optimiert für die Identifikation und Planung von Routen entlang von Straßen ohne Mapillary-Abdeckung. Die Anwendung visualisiert Mapillary Coverage-Daten und hilft dabei, Lücken in der Street View-Abdeckung zu identifizieren.
 
 ---
 
 ## Features
 
-- **Multi-Profile Routing**: Unterstützung für verschiedene Verkehrsmittel (Auto, Fahrrad, etc.)
+- **Mapillary Coverage Routing**: Routenplanung mit Fokus auf Mapillary-Abdeckung - identifiziere Straßen ohne Street View-Abdeckung
+- **Farbcodierte Route-Visualisierung**: Darstellung der Route basierend auf Mapillary Coverage, Surface und Road Class - sofort sichtbar, welche Abschnitte noch keine Mapillary-Abdeckung haben
+- **Missing Streets Layer**: Visualisierung von Straßen ohne Mapillary-Abdeckung (Daten von OSM Verkehrswende) als Kontext-Layer
 - **Interaktive Routenplanung**: Start- und Endpunkt per Klick oder Geocoding setzen
-- **Route-Visualisierung**: Farbcodierte Darstellung basierend auf Mapillary Coverage, Surface und Road Class
+- **Multi-Profile Routing**: Unterstützung für verschiedene Verkehrsmittel (Auto, Fahrrad, etc.)
 - **Höhenprofil**: Interaktives Canvas-basiertes Höhenprofil mit Hover-Funktionalität und Encoded Values Overlay
-- **Kontext-Layer**: Radinfrastruktur (OpenStreetMap, FixMyCity) und Mapillary Missing Streets (OpenStreetMap, OSM-Verkehrswendegruppe) mit Toggle-Funktionalität
+- **Kontext-Layer**: Radinfrastruktur (OpenStreetMap, FixMyCity) und Mapillary Missing Streets mit Toggle-Funktionalität
 - **Permalink**: Vollständige State-Speicherung in der URL (Kartenposition, Route, Profil, Layer)
-- **GPX-Export**: Export berechneter Routen als GPX-Datei
+- **GPX-Export**: Export berechneter Routen als GPX-Datei für Navigation oder weitere Analyse
 
 ---
 
@@ -26,10 +26,10 @@
 - **Photon Geocoder**: Adresssuche und Geocoding
 
 ### Datenquellen
-- **GraphHopper API**: Routenberechnung
+- **GraphHopper API**: Routenberechnung mit Mapillary Coverage-Daten
 - **OpenStreetMap**: Basiskartendaten
-- **FixMyCity** / **tilda-geo.de**: Vektortiles für Radinfrastruktur
-- **OSM Verkehrswende**: Mapillary Missing Streets Daten
+- **OSM Verkehrswende**: Mapillary Missing Streets Daten - [osm-verkehrswende.org](https://www.osm-verkehrswende.org)
+- **FixMyCity** / **tilda-geo.de**: Vektortiles für Radinfrastruktur - [tilda-geo.de](https://tilda-geo.de)
 - **MapTiler** (optional): Hillshade und Terrain-Daten
 - **Sonny's Terrain Models**: Höhenmodelle für Elevation-Daten (CC BY 4.0) - [sonny.4lima.de](https://sonny.4lima.de)
 
@@ -38,7 +38,7 @@
 ## Projektstruktur
 
 ```
-maplibre_routing/
+missing_mapillary_gh-routing/
 ├── index.html                    # Haupt-HTML-Datei
 ├── main.js                       # Haupt-Initialisierung
 ├── style.css                     # Stylesheet
@@ -81,14 +81,10 @@ maplibre_routing/
 
 ---
 
-## Verwendung als Template
+## Verwendung
 
-Dieses Repository dient als **Template-Repository** für neue Projekte. Die folgenden Repositories nutzen dieses Template als Basis:
-
-- **missing_mapillary_gh-routing** - [https://github.com/vizsim/missing_mapillary_gh-routing] - *kommt noch*
-- **custom_bicycle_gh-routing** - [https://github.com/vizsim/custom_bicycle_gh-routing] - *kommt noch*
-
-> 💡 Um ein neues Projekt aus diesem Template zu erstellen, verwende die GitHub Template-Funktion oder forke dieses Repository.
+Die Anwendung kann direkt im Browser geöffnet werden. 
+https://vizsim.github.io/missing_mapillary_gh-routing/
 
 ---
 
@@ -104,6 +100,6 @@ Die Lizenz wird in Kürze hinzugefügt.
 - **GraphHopper**: Open-Source Routing-Engine
 - **OpenStreetMap**: Community-getriebene Kartendaten
 - **Mapillary**: Street View Fotos und Coverage-Daten
-- **FixMyCity** / **tilda-geo.de**: Vektortiles für Radinfrastruktur - [tilda-geo.de](https://tilda-geo.de)
 - **OSM Verkehrswende**: Mapillary Missing Streets Daten - [osm-verkehrswende.org](https://www.osm-verkehrswende.org)
+- **FixMyCity** / **tilda-geo.de**: Vektortiles für Radinfrastruktur - [tilda-geo.de](https://tilda-geo.de)
 - **Sonny's Terrain Models**: Höhenmodelle (CC BY 4.0) - [sonny.4lima.de](https://sonny.4lima.de)

@@ -42,7 +42,7 @@ export const defaultCustomModel = {
     {"if": "surface==COBBLESTONE", "multiply_by": 0.9},
     
     // Mapillary coverage preference (can be adjusted via slider)
-    {"if": "mapillary_coverage==true", "multiply_by": 0.1}
+    {"if": "mapillary_coverage==true", "multiply_by": 1}
   ],
   "speed": [
     // Basis: eingebaute Autogeschwindigkeit nutzen
@@ -178,7 +178,7 @@ export const defaultBikeCustomModel = {
     {"if": "surface == SAND || surface == COBBLESTONE", "multiply_by": 0.4},
     
     // Mapillary coverage preference (can be adjusted via slider)
-    {"if": "mapillary_coverage==true", "multiply_by": 0.1}
+    {"if": "mapillary_coverage==true", "multiply_by": 1}
   ],
   "speed": [
     // Basis: eingebaute Fahrradgeschwindigkeit nutzen
