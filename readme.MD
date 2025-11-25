@@ -22,11 +22,11 @@
 
 ### Framework & Bibliotheken
 - **MapLibre GL JS** (v5.6.0): Kartenvisualisierung
-- **GraphHopper Routing API**: Routenberechnung
+- **GraphHopper Routing API**: Routenberechnung auf Basis von angepasstem Fork [vizsim/graphhopper:bikelanes_ec](https://github.com/vizsim/graphhopper/tree/bikelanes_ec)
 - **Photon Geocoder**: Adresssuche und Geocoding
 
 ### Datenquellen
-- **GraphHopper API**: Routenberechnung mit Mapillary Coverage-Daten
+- **GraphHopper API**: Routenberechnung (Server-Instanz: [ghroute.duckdns.org](https://ghroute.duckdns.org))
 - **OpenStreetMap**: Basiskartendaten
 - **OSM Verkehrswende**: Mapillary Missing Streets Daten - [osm-verkehrswende.org](https://www.osm-verkehrswende.org)
 - **FixMyCity** / **tilda-geo.de**: Vektortiles für Radinfrastruktur - [tilda-geo.de](https://tilda-geo.de)
@@ -83,8 +83,9 @@ missing_mapillary_gh-routing/
 
 ## Verwendung
 
-Die Anwendung kann direkt im Browser geöffnet werden. 
-https://vizsim.github.io/missing_mapillary_gh-routing/
+Die Anwendung kann direkt im Browser geöffnet werden: [https://vizsim.github.io/missing_mapillary_gh-routing/](https://vizsim.github.io/missing_mapillary_gh-routing/)
+
+Die Anwendung nutzt eine eigene GraphHopper-Instanz, die auf [ghroute.duckdns.org](https://ghroute.duckdns.org) gehostet wird.
 
 ---
 
@@ -97,7 +98,7 @@ Die Lizenz wird in Kürze hinzugefügt.
 ## Credits
 
 - **MapLibre GL JS**: Open-Source Kartenbibliothek
-- **GraphHopper**: Open-Source Routing-Engine
+- **GraphHopper**: Routenberechnung
 - **OpenStreetMap**: Community-getriebene Kartendaten
 - **Mapillary**: Street View Fotos und Coverage-Daten
 - **OSM Verkehrswende**: Mapillary Missing Streets Daten - [osm-verkehrswende.org](https://www.osm-verkehrswende.org)
