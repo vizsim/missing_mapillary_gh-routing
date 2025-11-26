@@ -1,7 +1,14 @@
-// Basic map layers (satellite, hillshade)
+// Basic map layers (osm, satellite, hillshade)
 
 export function addBasicLayers(map) {
   // Raster layers
+  map.addLayer({
+    id: "osm-layer",
+    type: "raster",
+    source: "osm",
+    layout: { visibility: "none" }
+  });
+
   map.addLayer({
     id: "satellite-layer",
     type: "raster",

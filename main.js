@@ -25,9 +25,13 @@ const isLocalhost = location.hostname === "localhost";
 // Set thumbnail background images (wait for DOM to be ready)
 function setupThumbnails() {
   const standardThumb = document.querySelector('[data-map="standard"]');
+  const osmThumb = document.querySelector('[data-map="osm"]');
   const satelliteThumb = document.querySelector('[data-map="satellite"]');
   if (standardThumb) {
     standardThumb.style.backgroundImage = "url('./thumbs/thumb-standard.png')";
+  }
+  if (osmThumb) {
+    osmThumb.style.backgroundImage = "url('./thumbs/thumb-osm.png')";
   }
   if (satelliteThumb) {
     satelliteThumb.style.backgroundImage = "url('./thumbs/thumb-satellite.png')";

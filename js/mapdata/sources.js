@@ -1,6 +1,16 @@
 // Map data sources configuration
 
 export function addBasicSources(map, maptilerApiKey) {
+  // Raster: OSM Standard
+  map.addSource("osm", {
+    type: "raster",
+    tiles: [
+      "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    ],
+    tileSize: 256,
+    attribution: "© OpenStreetMap contributors"
+  });
+
   // Raster: Satellite ESRI
   map.addSource("satellite", {
     type: "raster",
