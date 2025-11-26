@@ -1211,9 +1211,15 @@ export function clearRoute(map) {
     map.setPaintProperty('route-layer', 'line-color', '#3b82f6');
   }
   
-  // Update UI to clear waypoints list and markers
+  // Clear waypoints list in UI immediately
+  const waypointsList = document.getElementById('waypoints-list');
+  if (waypointsList) {
+    waypointsList.innerHTML = '';
+  }
+  
+  // Update UI to clear markers
   import('./routingUI.js').then(({ updateMarkers, updateWaypointsList }) => {
     updateMarkers(map);
-    updateWaypointsList();
+    updateWaypointsList(); // This will ensure the list is empty (routeState.waypoints is already cleared)
   });
 }
