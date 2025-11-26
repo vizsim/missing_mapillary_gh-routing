@@ -279,10 +279,21 @@ function displayComparison(
 
 // Validate coordinates before route calculation
 function validateCoordinates(coord, name) {
-  if (!Array.isArray(coord) || coord.length < 2) {
-    throw new Error(`${name}: Koordinaten müssen ein Array mit mindestens 2 Werten sein`);
+  let lng, lat;
+  
+  // Support both array format [lng, lat] and object format {lng, lat, svgId}
+  if (Array.isArray(coord)) {
+    if (coord.length < 2) {
+      throw new Error(`${name}: Koordinaten müssen ein Array mit mindestens 2 Werten sein`);
+    }
+    [lng, lat] = coord;
+  } else if (coord && typeof coord === 'object') {
+    lng = coord.lng;
+    lat = coord.lat;
+  } else {
+    throw new Error(`${name}: Koordinaten müssen ein Array [lng, lat] oder Objekt {lng, lat} sein`);
   }
-  const [lng, lat] = coord;
+  
   if (typeof lng !== 'number' || typeof lat !== 'number') {
     throw new Error(`${name}: Länge und Breite müssen Zahlen sein`);
   }
@@ -676,7 +687,16 @@ export async function calculateRoute(map, start, end, waypoints = []) {
   }
   
   // Build points array: [start, ...optimizedWaypoints, end]
-  const allPoints = [start, ...optimizedWaypoints, end];
+  // Extract coordinates from waypoint objects if needed
+  const waypointCoords = optimizedWaypoints.map(wp => {
+    if (Array.isArray(wp)) {
+      return wp;
+    } else if (wp && typeof wp === 'object' && wp.lng !== undefined && wp.lat !== undefined) {
+      return [wp.lng, wp.lat];
+    }
+    return wp;
+  });
+  const allPoints = [start, ...waypointCoords, end];
   
   routeCalculationInProgress = true;
   const calculateBtn = document.getElementById('calculate-route');

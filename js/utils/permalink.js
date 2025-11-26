@@ -1,7 +1,7 @@
 // permalink.js - Permalink functionality for map state, routing, and context layers
 
 import { routeState } from '../routing/routeState.js';
-import { updateMarkers, updateWaypointsList } from '../routing/routingUI.js';
+import { updateMarkers, updateWaypointsList, getRandomWaypointSvg } from '../routing/routingUI.js';
 import {
   supportsCustomModel,
   ensureCustomModel,
@@ -125,7 +125,16 @@ export class Permalink {
     
     // Waypoints
     routeState.waypoints.forEach(waypoint => {
-      const [lng, lat] = waypoint;
+      // Support both array format [lng, lat] and object format {lng, lat, svgId}
+      let lng, lat;
+      if (Array.isArray(waypoint)) {
+        [lng, lat] = waypoint;
+      } else if (waypoint && typeof waypoint === 'object') {
+        lng = waypoint.lng;
+        lat = waypoint.lat;
+      } else {
+        return; // Skip invalid waypoints
+      }
       paramParts.push(`waypoint=${Math.round(lat * 10000) / 10000}/${Math.round(lng * 10000) / 10000}`);
     });
     
@@ -254,7 +263,12 @@ export class Permalink {
       const separator = waypointParam.includes('/') ? '/' : ',';
       const [lat, lng] = waypointParam.split(separator).map(parseFloat);
       if (!isNaN(lat) && !isNaN(lng)) {
-        routeState.waypoints.push([lng, lat]);
+        // Create waypoint object with random SVG (same as when adding new waypoint)
+        routeState.waypoints.push({
+          lng: lng,
+          lat: lat,
+          svgId: getRandomWaypointSvg()
+        });
       }
     });
     
@@ -514,7 +528,16 @@ export class Permalink {
     
     // Add waypoints
     routeState.waypoints.forEach(waypoint => {
-      const [lng, lat] = waypoint;
+      // Support both array format [lng, lat] and object format {lng, lat, svgId}
+      let lng, lat;
+      if (Array.isArray(waypoint)) {
+        [lng, lat] = waypoint;
+      } else if (waypoint && typeof waypoint === 'object') {
+        lng = waypoint.lng;
+        lat = waypoint.lat;
+      } else {
+        return; // Skip invalid waypoints
+      }
       paramParts.push(`waypoint=${Math.round(lat * 10000) / 10000}/${Math.round(lng * 10000) / 10000}`);
     });
     

@@ -2,14 +2,28 @@
 // Optimizes the order of waypoints to minimize total route distance/time
 
 /**
+ * Extract coordinates from point (supports both array and object format)
+ * @param {Array<number>|Object} point - [lng, lat] or {lng, lat}
+ * @returns {Array<number>} [lng, lat]
+ */
+function extractCoordinates(point) {
+  if (Array.isArray(point)) {
+    return point;
+  } else if (point && typeof point === 'object' && point.lng !== undefined && point.lat !== undefined) {
+    return [point.lng, point.lat];
+  }
+  return point;
+}
+
+/**
  * Calculate Haversine distance between two points in meters
- * @param {Array<number>} point1 - [lng, lat]
- * @param {Array<number>} point2 - [lng, lat]
+ * @param {Array<number>|Object} point1 - [lng, lat] or {lng, lat}
+ * @param {Array<number>|Object} point2 - [lng, lat] or {lng, lat}
  * @returns {number} Distance in meters
  */
 function haversineDistance(point1, point2) {
-  const [lng1, lat1] = point1;
-  const [lng2, lat2] = point2;
+  const [lng1, lat1] = extractCoordinates(point1);
+  const [lng2, lat2] = extractCoordinates(point2);
   
   const R = 6371000; // Earth radius in meters
   const dLat = (lat2 - lat1) * Math.PI / 180;

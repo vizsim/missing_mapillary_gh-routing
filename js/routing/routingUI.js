@@ -11,6 +11,49 @@ import {
 } from './customModel.js';
 import { setupRoutingInputGeocoder } from '../utils/geocoder.js';
 
+// Available SVG files for waypoints
+const WAYPOINT_SVGS = [
+  'raspberry-svgrepo-com.svg',
+  'pineapple-svgrepo-com.svg',
+  'banana-svgrepo-com.svg',
+  'fries-svgrepo-com.svg',
+  'broccoli-svgrepo-com.svg',
+  'doughnut-svgrepo-com.svg',
+  'grapes-svgrepo-com.svg',
+  'pretzel-svgrepo-com.svg',
+  'apple-svgrepo-com.svg',
+  'cabbage-svgrepo-com.svg',
+  'toffee-svgrepo-com.svg',
+  'cheese-svgrepo-com.svg',
+  'aubergine-svgrepo-com.svg',
+  'carrot-svgrepo-com.svg'
+];
+
+/**
+ * Get a random SVG ID for a waypoint that hasn't been used yet
+ * Only allows duplicates if all 14 SVGs are already in use
+ * @returns {string} SVG filename
+ */
+export function getRandomWaypointSvg() {
+  // Get all currently used SVG IDs from waypoints
+  const usedSvgIds = new Set(
+    routeState.waypoints
+      .map(wp => wp && typeof wp === 'object' && wp.svgId ? wp.svgId : null)
+      .filter(id => id !== null)
+  );
+  
+  // Get available SVGs (not yet used)
+  const availableSvgs = WAYPOINT_SVGS.filter(svg => !usedSvgIds.has(svg));
+  
+  // If there are available SVGs, use one of them
+  if (availableSvgs.length > 0) {
+    return availableSvgs[Math.floor(Math.random() * availableSvgs.length)];
+  }
+  
+  // All SVGs are in use, allow duplicates
+  return WAYPOINT_SVGS[Math.floor(Math.random() * WAYPOINT_SVGS.length)];
+}
+
 export function setupUIHandlers(map) {
   const startBtn = document.getElementById('set-start');
   const endBtn = document.getElementById('set-end');
@@ -203,6 +246,12 @@ export function setupUIHandlers(map) {
   
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
+      // Clear waypoints list immediately
+      const waypointsList = document.getElementById('waypoints-list');
+      if (waypointsList) {
+        waypointsList.innerHTML = '';
+      }
+      
       // Import dynamically to avoid circular dependency
       import('./routing.js').then(({ clearRoute }) => {
         clearRoute(map);
@@ -733,14 +782,17 @@ export function updateMarkers(map) {
   routeState.waypoints.forEach((waypoint, index) => {
     const el = document.createElement('div');
     el.className = 'custom-marker waypoint-marker';
-    el.style.width = '28px';
-    el.style.height = '28px';
+    el.style.width = '32px';
+    el.style.height = '32px';
     el.style.cursor = 'grab';
+    
+    // Load and display the waypoint's unique SVG
+    const svgPath = `svgs/${waypoint.svgId}`;
     el.innerHTML = `
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="#f59e0b" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-        <text x="12" y="14" text-anchor="middle" fill="white" font-size="10" font-family="Arial, sans-serif" stroke="white" stroke-width="0.4">${index + 1}</text>
-      </svg>
+      <div style="width: 32px; height: 32px; position: relative;">
+        <img src="${svgPath}" alt="Waypoint ${index + 1}" style="width: 100%; height: 100%; object-fit: contain;">
+        <div style="position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); background: #f59e0b; color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${index + 1}</div>
+      </div>
     `;
     el.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))';
     
@@ -749,7 +801,7 @@ export function updateMarkers(map) {
       draggable: true,
       anchor: 'bottom'
     })
-      .setLngLat(waypoint)
+      .setLngLat([waypoint.lng, waypoint.lat])
       .addTo(map);
     
     marker.on('dragstart', () => {
@@ -759,7 +811,12 @@ export function updateMarkers(map) {
     marker.on('dragend', () => {
       el.style.cursor = 'grab';
       const lngLat = marker.getLngLat();
-      routeState.waypoints[index] = [lngLat.lng, lngLat.lat];
+      // Preserve SVG ID when updating coordinates
+      routeState.waypoints[index] = {
+        lng: lngLat.lng,
+        lat: lngLat.lat,
+        svgId: waypoint.svgId
+      };
       updateWaypointsList();
       
       // Recalculate route if both start and end points exist
@@ -783,10 +840,11 @@ export function updateMarkers(map) {
 /**
  * Create HTML template for a waypoint list item
  * @param {number} index - Waypoint index (0-based)
- * @param {Array<number>} waypoint - Waypoint coordinates [lng, lat]
+ * @param {Object} waypoint - Waypoint object with lng, lat, and svgId
  * @returns {string} HTML string
  */
 function createWaypointItemHTML(index, waypoint) {
+  const svgPath = `svgs/${waypoint.svgId}`;
   return `
     <span class="waypoint-drag-handle" title="Zum Verschieben ziehen">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -798,8 +856,11 @@ function createWaypointItemHTML(index, waypoint) {
         <circle cx="15" cy="19" r="1"></circle>
       </svg>
     </span>
+    <span class="waypoint-svg-icon">
+      <img src="${svgPath}" alt="Waypoint ${index + 1}" style="width: 20px; height: 20px; object-fit: contain;">
+    </span>
     <span class="waypoint-number">${index + 1}</span>
-    <span class="waypoint-coords">${waypoint[1].toFixed(4)}, ${waypoint[0].toFixed(4)}</span>
+    <span class="waypoint-coords">${waypoint.lat.toFixed(3)}, ${waypoint.lng.toFixed(3)}</span>
     <button class="btn-remove-waypoint" data-index="${index}" title="Zwischenpunkt entfernen">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1024,7 +1085,13 @@ function handleWaypointsReordered() {
 
 // Add waypoint
 export function addWaypoint(map, lngLat) {
-  routeState.waypoints.push([lngLat.lng, lngLat.lat]);
+  // Create waypoint object with coordinates and random SVG
+  const waypoint = {
+    lng: lngLat.lng,
+    lat: lngLat.lat,
+    svgId: getRandomWaypointSvg()
+  };
+  routeState.waypoints.push(waypoint);
   // Reset manual sort flag when adding new waypoint - allows optimization again
   routeState.waypointsManuallySorted = false;
   updateMarkers(map);

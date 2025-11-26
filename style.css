@@ -1286,8 +1286,8 @@ code {
 .waypoint-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
+  gap: 6px;
+  padding: 4px 6px;
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 4px;
@@ -1344,25 +1344,40 @@ code {
   color: #6b7280;
 }
 
+.waypoint-svg-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.waypoint-svg-icon img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
 .waypoint-number {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   background: #f59e0b;
   color: white;
   border-radius: 50%;
   font-weight: bold;
-  font-size: 11px;
+  font-size: 10px;
   flex-shrink: 0;
 }
 
 .waypoint-coords {
   flex: 1;
   color: #6b7280;
-  font-family: 'Courier New', monospace;
-  font-size: 11px;
+  font-family: sans-serif;
+  font-size: 10px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
