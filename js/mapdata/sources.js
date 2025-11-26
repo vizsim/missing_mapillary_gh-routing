@@ -11,24 +11,21 @@ export function addBasicSources(map, maptilerApiKey) {
     attribution: "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
   });
 
-  // Raster: Hillshade
-  if (maptilerApiKey) {
-    map.addSource("hillshade", {
-      type: "raster",
-      url: `https://api.maptiler.com/tiles/hillshades/tiles.json?key=${maptilerApiKey}`,
-      tileSize: 256,
-      attribution: "© MapTiler"
-    });
-    
-    // Raster-DEM: Terrain
-    map.addSource("terrain", {
-      type: "raster-dem",
-      url: `https://api.maptiler.com/tiles/terrain-rgb-v2/tiles.json?key=${maptilerApiKey}`,
-      tileSize: 256,
-      encoding: "mapbox",
-      attribution: "© MapTiler"
-    });
-  }
+  // Raster-DEM: Terrain (Mapterhorn)
+  map.addSource("terrain", {
+    type: "raster-dem",
+    url: "https://tiles.mapterhorn.com/tilejson.json",
+    tileSize: 512,
+    encoding: "terrarium"
+  });
+  
+  // Raster-DEM: Hillshade (Mapterhorn)
+  map.addSource("hillshade", {
+    type: "raster-dem",
+    url: "https://tiles.mapterhorn.com/tilejson.json",
+    tileSize: 512,
+    encoding: "terrarium"
+  });
 
   // Bike lanes source
   map.addSource("bike-lanes", {

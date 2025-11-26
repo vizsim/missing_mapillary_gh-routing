@@ -13,11 +13,13 @@ export function addBasicLayers(map) {
   if (map.getSource("hillshade")) {
     map.addLayer({
       id: "hillshade-layer",
-      type: "raster",
+      type: "hillshade",
       source: "hillshade",
       layout: { visibility: "none" },
       paint: {
-        "raster-opacity": 0.3
+        "hillshade-shadow-color": "#000000",
+        "hillshade-highlight-color": "#ffffff",
+        "hillshade-accent-color": "#000000"
       }
     });
   }
