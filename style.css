@@ -901,6 +901,8 @@ code {
 
 .routing-panel.collapsed {
   width: 320px;
+  display: flex !important; /* Ensure panel is visible when collapsed */
+  visibility: visible !important;
 }
 
 .routing-panel.collapsed .routing-content {
@@ -910,6 +912,32 @@ code {
 .routing-panel.collapsed .routing-header {
   border-bottom: none;
   padding: 12px 16px;
+  display: flex !important; /* Ensure header is visible when collapsed */
+}
+
+/* Ensure profile selector is visible when collapsed */
+.routing-panel.collapsed .profile-selector {
+  display: flex !important;
+  flex: 1;
+  visibility: visible !important;
+}
+
+/* Ensure profile buttons are visible when collapsed */
+.routing-panel.collapsed .profile-btn {
+  display: flex !important;
+  visibility: visible !important;
+}
+
+/* Quick action buttons in header (only visible when collapsed) */
+.header-quick-actions {
+  display: none;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.routing-panel.collapsed .header-quick-actions {
+  display: flex !important;
 }
 
 .routing-header {
@@ -1114,6 +1142,52 @@ code {
 
 .btn-set-end svg {
   stroke: #ef4444;
+}
+
+/* Header quick action buttons (collapsed state) */
+.btn-set-point-header,
+.btn-add-waypoint-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #f3f4f6;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-set-point-header:hover,
+.btn-add-waypoint-header:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.btn-set-point-header.active,
+.btn-add-waypoint-header.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.btn-set-point-header.active svg,
+.btn-add-waypoint-header.active svg {
+  stroke: white;
+}
+
+.btn-set-start-header svg {
+  stroke: #10b981;
+}
+
+.btn-set-end-header svg {
+  stroke: #ef4444;
+}
+
+.btn-add-waypoint-header svg {
+  stroke: #f59e0b;
 }
 
 /* ───── Waypoints ───── */

@@ -116,24 +116,51 @@ export function setupUIHandlers(map) {
     });
   }
 
-  if (startBtn) {
-    startBtn.addEventListener('click', () => {
-      routeState.isSelectingStart = true;
-      routeState.isSelectingEnd = false;
-      map.getCanvas().style.cursor = 'crosshair';
-      startBtn.classList.add('active');
-      if (endBtn) endBtn.classList.remove('active');
+  // Helper function to handle start/end button clicks
+  const handleStartClick = () => {
+    routeState.isSelectingStart = true;
+    routeState.isSelectingEnd = false;
+    map.getCanvas().style.cursor = 'crosshair';
+    // Update both original and header buttons
+    document.querySelectorAll('.btn-set-start, .btn-set-start-header').forEach(btn => {
+      btn.classList.add('active');
     });
+    document.querySelectorAll('.btn-set-end, .btn-set-end-header').forEach(btn => {
+      btn.classList.remove('active');
+    });
+  };
+
+  const handleEndClick = () => {
+    routeState.isSelectingEnd = true;
+    routeState.isSelectingStart = false;
+    map.getCanvas().style.cursor = 'crosshair';
+    // Update both original and header buttons
+    document.querySelectorAll('.btn-set-end, .btn-set-end-header').forEach(btn => {
+      btn.classList.add('active');
+    });
+    document.querySelectorAll('.btn-set-start, .btn-set-start-header').forEach(btn => {
+      btn.classList.remove('active');
+    });
+  };
+
+  if (startBtn) {
+    startBtn.addEventListener('click', handleStartClick);
+  }
+
+  // Header start button
+  const startBtnHeader = document.getElementById('set-start-header');
+  if (startBtnHeader) {
+    startBtnHeader.addEventListener('click', handleStartClick);
   }
 
   if (endBtn) {
-    endBtn.addEventListener('click', () => {
-      routeState.isSelectingEnd = true;
-      routeState.isSelectingStart = false;
-      map.getCanvas().style.cursor = 'crosshair';
-      endBtn.classList.add('active');
-      if (startBtn) startBtn.classList.remove('active');
-    });
+    endBtn.addEventListener('click', handleEndClick);
+  }
+
+  // Header end button
+  const endBtnHeader = document.getElementById('set-end-header');
+  if (endBtnHeader) {
+    endBtnHeader.addEventListener('click', handleEndClick);
   }
 
   // Hide route button
@@ -388,18 +415,31 @@ export function setupUIHandlers(map) {
   }
   
   // Add waypoint button handler
+  // Helper function to handle add waypoint button click
+  const handleAddWaypointClick = () => {
+    routeState.isSelectingWaypoint = true;
+    routeState.isSelectingStart = false;
+    routeState.isSelectingEnd = false;
+    map.getCanvas().style.cursor = 'crosshair';
+    
+    // Update button states (both original and header buttons)
+    document.querySelectorAll('.btn-set-start, .btn-set-start-header').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    document.querySelectorAll('.btn-set-end, .btn-set-end-header').forEach(btn => {
+      btn.classList.remove('active');
+    });
+  };
+
   const addWaypointBtn = document.getElementById('add-waypoint');
   if (addWaypointBtn) {
-    addWaypointBtn.addEventListener('click', () => {
-      routeState.isSelectingWaypoint = true;
-      routeState.isSelectingStart = false;
-      routeState.isSelectingEnd = false;
-      map.getCanvas().style.cursor = 'crosshair';
-      
-      // Update button states
-      if (startBtn) startBtn.classList.remove('active');
-      if (endBtn) endBtn.classList.remove('active');
-    });
+    addWaypointBtn.addEventListener('click', handleAddWaypointClick);
+  }
+
+  // Header add waypoint button
+  const addWaypointBtnHeader = document.getElementById('add-waypoint-header');
+  if (addWaypointBtnHeader) {
+    addWaypointBtnHeader.addEventListener('click', handleAddWaypointClick);
   }
   
   // Waypoint optimization toggle handler
@@ -430,17 +470,25 @@ export function setupUIHandlers(map) {
     if (routeState.isSelectingStart) {
       setStartPoint(map, e.lngLat);
       routeState.isSelectingStart = false;
-      if (startBtn) startBtn.classList.remove('active');
+      // Remove active class from both original and header buttons
+      document.querySelectorAll('.btn-set-start, .btn-set-start-header').forEach(btn => {
+        btn.classList.remove('active');
+      });
       
       // Automatically activate end point selection mode
       routeState.isSelectingEnd = true;
       map.getCanvas().style.cursor = 'crosshair';
-      if (endBtn) endBtn.classList.add('active');
+      document.querySelectorAll('.btn-set-end, .btn-set-end-header').forEach(btn => {
+        btn.classList.add('active');
+      });
     } else if (routeState.isSelectingEnd) {
       setEndPoint(map, e.lngLat);
       routeState.isSelectingEnd = false;
       map.getCanvas().style.cursor = '';
-      if (endBtn) endBtn.classList.remove('active');
+      // Remove active class from both original and header buttons
+      document.querySelectorAll('.btn-set-end, .btn-set-end-header').forEach(btn => {
+        btn.classList.remove('active');
+      });
     } else if (routeState.isSelectingWaypoint) {
       addWaypoint(map, e.lngLat);
       routeState.isSelectingWaypoint = false;
@@ -463,8 +511,14 @@ export function setupUIHandlers(map) {
       routeState.isSelectingStart = false;
       routeState.isSelectingEnd = true;
       map.getCanvas().style.cursor = 'crosshair';
-      if (startBtn) startBtn.classList.remove('active');
-      if (endBtn) endBtn.classList.add('active');
+      // Remove active class from both original and header buttons
+      document.querySelectorAll('.btn-set-start, .btn-set-start-header').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      // Add active class to end buttons
+      document.querySelectorAll('.btn-set-end, .btn-set-end-header').forEach(btn => {
+        btn.classList.add('active');
+      });
       
       // Automatically calculate route if both points are set
       if (routeState.startPoint && routeState.endPoint) {
@@ -481,6 +535,11 @@ export function setupUIHandlers(map) {
       routeState.endPoint = [lng, lat];
       updateMarkers(map);
       map.flyTo({ center: [lng, lat], zoom: 14 });
+      
+      // Remove active class from both original and header buttons
+      document.querySelectorAll('.btn-set-end, .btn-set-end-header').forEach(btn => {
+        btn.classList.remove('active');
+      });
       
       // Automatically calculate route if both points are set
       if (routeState.startPoint && routeState.endPoint) {
