@@ -391,6 +391,29 @@ export function setupUIHandlers(map) {
       if (endBtn) endBtn.classList.remove('active');
     });
   }
+  
+  // Waypoint optimization toggle handler
+  const waypointOptimizationToggle = document.getElementById('waypoint-optimization-toggle');
+  if (waypointOptimizationToggle) {
+    // Initialize checkbox state from routeState
+    waypointOptimizationToggle.checked = routeState.waypointOptimizationEnabled !== false;
+    
+    waypointOptimizationToggle.addEventListener('change', (e) => {
+      routeState.waypointOptimizationEnabled = e.target.checked;
+      
+      // If optimization is re-enabled, reset manual sort flag to allow optimization
+      if (e.target.checked) {
+        routeState.waypointsManuallySorted = false;
+      }
+      
+      // If optimization is enabled and we have waypoints, recalculate route with optimization
+      if (e.target.checked && routeState.startPoint && routeState.endPoint && routeState.waypoints.length > 1) {
+        import('./routing.js').then(({ calculateRoute }) => {
+          calculateRoute(map, routeState.startPoint, routeState.endPoint, routeState.waypoints);
+        });
+      }
+    });
+  }
 
   // Map click handler
   map.on('click', (e) => {
@@ -694,7 +717,19 @@ export function updateWaypointsList() {
   routeState.waypoints.forEach((waypoint, index) => {
     const item = document.createElement('div');
     item.className = 'waypoint-item';
+    item.draggable = true;
+    item.dataset.index = index;
     item.innerHTML = `
+      <span class="waypoint-drag-handle" title="Zum Verschieben ziehen">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="9" cy="12" r="1"></circle>
+          <circle cx="9" cy="5" r="1"></circle>
+          <circle cx="9" cy="19" r="1"></circle>
+          <circle cx="15" cy="12" r="1"></circle>
+          <circle cx="15" cy="5" r="1"></circle>
+          <circle cx="15" cy="19" r="1"></circle>
+        </svg>
+      </span>
       <span class="waypoint-number">${index + 1}</span>
       <span class="waypoint-coords">${waypoint[1].toFixed(5)}, ${waypoint[0].toFixed(5)}</span>
       <button class="btn-remove-waypoint" data-index="${index}" title="Zwischenpunkt entfernen">
@@ -706,19 +741,109 @@ export function updateWaypointsList() {
     `;
     waypointsList.appendChild(item);
     
+    // Drag & Drop handlers
+    item.addEventListener('dragstart', (e) => {
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/html', item.outerHTML);
+      e.dataTransfer.setData('text/plain', index.toString());
+    });
+    
+    item.addEventListener('dragend', (e) => {
+      item.classList.remove('dragging');
+      // Remove all drop indicators
+      document.querySelectorAll('.waypoint-item').forEach(el => {
+        el.classList.remove('drag-over');
+      });
+    });
+    
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      
+      const draggingItem = document.querySelector('.waypoint-item.dragging');
+      if (!draggingItem || draggingItem === item) return;
+      
+      const items = Array.from(waypointsList.querySelectorAll('.waypoint-item:not(.dragging)'));
+      const afterElement = getDragAfterElement(waypointsList, e.clientY);
+      
+      // Remove all drag-over classes
+      items.forEach(el => el.classList.remove('drag-over'));
+      
+      if (afterElement == null) {
+        item.classList.add('drag-over');
+      } else {
+        afterElement.classList.add('drag-over');
+      }
+    });
+    
+    item.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
+      const dropIndex = parseInt(item.dataset.index);
+      
+      if (draggedIndex === dropIndex) return;
+      
+      // Reorder waypoints
+      const draggedWaypoint = routeState.waypoints[draggedIndex];
+      routeState.waypoints.splice(draggedIndex, 1);
+      routeState.waypoints.splice(dropIndex, 0, draggedWaypoint);
+      
+      // Mark as manually sorted - this disables automatic optimization
+      routeState.waypointsManuallySorted = true;
+      
+      // Update UI
+      updateWaypointsList();
+      updateMarkers(routeState.mapInstance);
+      
+      // Recalculate route if both start and end points exist
+      if (routeState.startPoint && routeState.endPoint) {
+        import('./routing.js').then(({ calculateRoute }) => {
+          calculateRoute(routeState.mapInstance, routeState.startPoint, routeState.endPoint, routeState.waypoints);
+        });
+      }
+    });
+    
     // Remove button handler
     const removeBtn = item.querySelector('.btn-remove-waypoint');
     if (removeBtn) {
-      removeBtn.addEventListener('click', () => {
+      // Prevent button from triggering drag
+      removeBtn.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+      });
+      removeBtn.addEventListener('dragstart', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+      });
+      removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         removeWaypoint(index);
       });
     }
   });
 }
 
+// Helper function to determine where to insert dragged item
+function getDragAfterElement(container, y) {
+  const draggableElements = [...container.querySelectorAll('.waypoint-item:not(.dragging)')];
+  
+  return draggableElements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    
+    if (offset < 0 && offset > closest.offset) {
+      return { offset: offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
 // Add waypoint
 export function addWaypoint(map, lngLat) {
   routeState.waypoints.push([lngLat.lng, lngLat.lat]);
+  // Reset manual sort flag when adding new waypoint - allows optimization again
+  routeState.waypointsManuallySorted = false;
   updateMarkers(map);
   updateWaypointsList();
   
@@ -733,6 +858,12 @@ export function addWaypoint(map, lngLat) {
 // Remove waypoint
 export function removeWaypoint(index) {
   routeState.waypoints.splice(index, 1);
+  
+  // Reset manual sort flag if no waypoints left - allows optimization for new waypoints
+  if (routeState.waypoints.length === 0) {
+    routeState.waypointsManuallySorted = false;
+  }
+  
   const map = routeState.mapInstance;
   if (map) {
     updateMarkers(map);

@@ -14,6 +14,7 @@ import {
   updateMapillaryPriority
 } from './customModel.js';
 import { calculateDistance } from './heightgraph/heightgraphUtils.js';
+import { optimizeWaypoints } from './waypointOptimizer.js';
 
 //const GRAPHHOPPER_URL = 'http://localhost:8989';
 const GRAPHHOPPER_URL = 'https://ghroute.duckdns.org';
@@ -655,8 +656,27 @@ export async function calculateRoute(map, start, end, waypoints = []) {
     validateCoordinates(wp, `Zwischenpunkt ${index + 1}`);
   });
   
-  // Build points array: [start, ...waypoints, end]
-  const allPoints = [start, ...waypoints, end];
+  // Optimize waypoint order if enabled, we have waypoints, and they weren't manually sorted
+  let optimizedWaypoints = waypoints;
+  if (waypoints.length > 1 && 
+      routeState.waypointOptimizationEnabled !== false && 
+      !routeState.waypointsManuallySorted) {
+    const algorithm = routeState.waypointOptimizationAlgorithm || 'nearest_neighbor';
+    optimizedWaypoints = optimizeWaypoints(start, end, waypoints, algorithm);
+    
+    // Update routeState with optimized order if order changed
+    if (JSON.stringify(optimizedWaypoints) !== JSON.stringify(waypoints)) {
+      routeState.waypoints = optimizedWaypoints;
+      // Update UI to reflect new order
+      import('./routingUI.js').then(({ updateMarkers, updateWaypointsList }) => {
+        updateMarkers(map);
+        updateWaypointsList();
+      });
+    }
+  }
+  
+  // Build points array: [start, ...optimizedWaypoints, end]
+  const allPoints = [start, ...optimizedWaypoints, end];
   
   routeCalculationInProgress = true;
   const calculateBtn = document.getElementById('calculate-route');

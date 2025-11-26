@@ -37,6 +37,11 @@ export const routeState = {
   currentRouteData: null,
   currentEncodedType: 'mapillary_coverage',
   
+  // Waypoint optimization settings
+  waypointOptimizationEnabled: true, // Enable/disable waypoint optimization
+  waypointOptimizationAlgorithm: 'nearest_neighbor', // 'nearest_neighbor' or 'greedy_insertion'
+  waypointsManuallySorted: false, // Flag to indicate if waypoints were manually sorted (disables auto-optimization)
+  
   // Initialize state
   init(map) {
     this.mapInstance = map;
@@ -51,6 +56,7 @@ export const routeState = {
     this.isSelectingEnd = false;
     this.isSelectingWaypoint = false;
     this.currentRouteData = null;
+    this.waypointsManuallySorted = false;
     
     if (this.startMarker) {
       this.startMarker.remove();

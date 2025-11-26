@@ -1127,11 +1127,42 @@ code {
   background: #f9fafb;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   color: #374151;
   min-height: 32px;
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
+  gap: 8px;
+}
+
+/* Waypoint optimization toggle */
+.waypoint-optimization-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.waypoint-optimization-toggle input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: #3b82f6;
+}
+
+.waypoint-optimization-toggle .toggle-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.waypoint-optimization-toggle:hover .toggle-label {
+  color: #374151;
 }
 
 /* Waypoints container (for the list below header) */
@@ -1187,6 +1218,42 @@ code {
   border: 1px solid #e5e7eb;
   border-radius: 4px;
   font-size: 12px;
+  cursor: move;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.waypoint-item:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.waypoint-item.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.waypoint-item.drag-over {
+  border-top: 2px solid #3b82f6;
+  border-top-style: dashed;
+}
+
+.waypoint-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  cursor: grab;
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.waypoint-drag-handle:active {
+  cursor: grabbing;
+}
+
+.waypoint-item:hover .waypoint-drag-handle {
+  color: #6b7280;
 }
 
 .waypoint-number {
