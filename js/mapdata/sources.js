@@ -67,7 +67,7 @@ export function addBasicSources(map, maptilerApiKey) {
     tiles: [
       "https://tiles.tilda-geo.de/atlas_generalized_roadspathclasses/{z}/{x}/{y}"
     ],
-    minzoom: 9,
+    minzoom: 11,
     maxzoom: 22
   });
 }

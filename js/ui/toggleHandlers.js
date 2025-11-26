@@ -109,13 +109,13 @@ export function setupToggleHandlers() {
       if (window.map) {
         const visibility = e.target.checked ? 'visible' : 'none';
         const layers = [
-          // 'missing-streets-missing-pathclasses', // vorerst ausgeschaltet
+          'missing-streets-missing-pathclasses',
           'missing-streets-missing-roads',
           'missing-streets-missing-bikelanes',
-          // 'missing-streets-regular-pathclasses', // vorerst ausgeschaltet
+          'missing-streets-regular-pathclasses',
           'missing-streets-regular-roads',
           'missing-streets-regular-bikelanes',
-          // 'missing-streets-pano-pathclasses', // vorerst ausgeschaltet
+          'missing-streets-pano-pathclasses',
           'missing-streets-pano-roads',
           'missing-streets-pano-bikelanes'
         ];
