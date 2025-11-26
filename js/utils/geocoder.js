@@ -445,3 +445,27 @@ export function setupRoutingInputGeocoder(inputElement, map, onSelect) {
     }
   };
 }
+
+/**
+ * Reverse geocoding: Convert coordinates to address
+ * @param {number} lng - Longitude
+ * @param {number} lat - Latitude
+ * @returns {Promise<string|null>} Formatted address or null if not found
+ */
+export async function reverseGeocode(lng, lat) {
+  try {
+    // Use Photon reverse geocoding API
+    const url = `https://photon.komoot.io/reverse?lon=${lng}&lat=${lat}&lang=de`;
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data.features && data.features.length > 0) {
+      const feature = data.features[0];
+      const formatted = formatGeocoderResult(feature);
+      return formatted.primary + (formatted.secondary ? ', ' + formatted.secondary : '');
+    }
+  } catch (error) {
+    console.error('Reverse geocoding error:', error);
+  }
+  return null;
+}

@@ -15,7 +15,12 @@ export const routeState = {
   // Points
   startPoint: null,
   endPoint: null,
-  waypoints: [], // Array of [lng, lat] coordinates
+  waypoints: [], // Array of {lng, lat, svgId} objects
+  
+  // Cached addresses for reverse geocoding
+  startAddress: null,
+  endAddress: null,
+  waypointAddresses: [], // Array of addresses corresponding to waypoints
   
   // Selection state
   isSelectingStart: false,
@@ -52,6 +57,9 @@ export const routeState = {
     this.startPoint = null;
     this.endPoint = null;
     this.waypoints = [];
+    this.startAddress = null;
+    this.endAddress = null;
+    this.waypointAddresses = [];
     this.isSelectingStart = false;
     this.isSelectingEnd = false;
     this.isSelectingWaypoint = false;

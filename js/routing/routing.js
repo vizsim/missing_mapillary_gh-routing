@@ -677,11 +677,28 @@ export async function calculateRoute(map, start, end, waypoints = []) {
     
     // Update routeState with optimized order if order changed
     if (JSON.stringify(optimizedWaypoints) !== JSON.stringify(waypoints)) {
+      // Create mapping from old waypoint to new index
+      const waypointMap = new Map();
+      waypoints.forEach((wp, oldIndex) => {
+        const wpKey = Array.isArray(wp) ? `${wp[0]},${wp[1]}` : `${wp.lng},${wp.lat}`;
+        waypointMap.set(wpKey, oldIndex);
+      });
+      
+      // Reorder addresses according to new waypoint order
+      const reorderedAddresses = optimizedWaypoints.map(wp => {
+        const wpKey = Array.isArray(wp) ? `${wp[0]},${wp[1]}` : `${wp.lng},${wp.lat}`;
+        const oldIndex = waypointMap.get(wpKey);
+        return oldIndex !== undefined ? routeState.waypointAddresses[oldIndex] : null;
+      });
+      
       routeState.waypoints = optimizedWaypoints;
+      routeState.waypointAddresses = reorderedAddresses;
+      
       // Update UI to reflect new order
-      import('./routingUI.js').then(({ updateMarkers, updateWaypointsList }) => {
+      import('./routingUI.js').then(({ updateMarkers, updateWaypointsList, updateCoordinateTooltips }) => {
         updateMarkers(map);
         updateWaypointsList();
+        updateCoordinateTooltips();
       });
     }
   }
@@ -1237,9 +1254,10 @@ export function clearRoute(map) {
     waypointsList.innerHTML = '';
   }
   
-  // Update UI to clear markers
-  import('./routingUI.js').then(({ updateMarkers, updateWaypointsList }) => {
+  // Update UI to clear markers and tooltips
+  import('./routingUI.js').then(({ updateMarkers, updateWaypointsList, updateCoordinateTooltips }) => {
     updateMarkers(map);
     updateWaypointsList(); // This will ensure the list is empty (routeState.waypoints is already cleared)
+    updateCoordinateTooltips(); // Clear tooltips
   });
 }

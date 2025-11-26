@@ -9,7 +9,7 @@ import {
   getMapillaryPriority,
   updateMapillaryPriority
 } from './customModel.js';
-import { setupRoutingInputGeocoder } from '../utils/geocoder.js';
+import { setupRoutingInputGeocoder, reverseGeocode } from '../utils/geocoder.js';
 
 // Available SVG files for waypoints
 const WAYPOINT_SVGS = [
@@ -515,31 +515,20 @@ export function setupUIHandlers(map) {
   }
 
   // Map click handler
-  map.on('click', (e) => {
+  map.on('click', async (e) => {
     if (routeState.isSelectingStart) {
-      setStartPoint(map, e.lngLat);
+      await setStartPoint(map, e.lngLat, { autoActivateEnd: true });
       routeState.isSelectingStart = false;
       // Remove active class from both original and header buttons
       document.querySelectorAll('.btn-set-start, .btn-set-start-header').forEach(btn => {
         btn.classList.remove('active');
       });
-      
-      // Automatically activate end point selection mode
-      routeState.isSelectingEnd = true;
-      map.getCanvas().style.cursor = 'crosshair';
-      document.querySelectorAll('.btn-set-end, .btn-set-end-header').forEach(btn => {
-        btn.classList.add('active');
-      });
     } else if (routeState.isSelectingEnd) {
-      setEndPoint(map, e.lngLat);
+      await setEndPoint(map, e.lngLat);
       routeState.isSelectingEnd = false;
       map.getCanvas().style.cursor = '';
-      // Remove active class from both original and header buttons
-      document.querySelectorAll('.btn-set-end, .btn-set-end-header').forEach(btn => {
-        btn.classList.remove('active');
-      });
     } else if (routeState.isSelectingWaypoint) {
-      addWaypoint(map, e.lngLat);
+      await addWaypoint(map, e.lngLat);
       routeState.isSelectingWaypoint = false;
       map.getCanvas().style.cursor = '';
     }
@@ -550,52 +539,28 @@ export function setupUIHandlers(map) {
   let endGeocoderControl = null;
 
   if (startInput) {
-    startGeocoderControl = setupRoutingInputGeocoder(startInput, map, ({ lng, lat, address }) => {
-      // Address is already set in input by geocoder, just update the point
-      routeState.startPoint = [lng, lat];
-      updateMarkers(map);
-      map.flyTo({ center: [lng, lat], zoom: 14 });
-      
-      // Automatically activate end point selection mode
+    startGeocoderControl = setupRoutingInputGeocoder(startInput, map, async ({ lng, lat, address }) => {
+      // Use centralized setStartPoint function with geocoder options
+      await setStartPoint(map, { lng, lat }, {
+        fromGeocoder: true,
+        address: address,
+        autoActivateEnd: true
+      });
       routeState.isSelectingStart = false;
-      routeState.isSelectingEnd = true;
-      map.getCanvas().style.cursor = 'crosshair';
-      // Remove active class from both original and header buttons
-      document.querySelectorAll('.btn-set-start, .btn-set-start-header').forEach(btn => {
-        btn.classList.remove('active');
-      });
-      // Add active class to end buttons
-      document.querySelectorAll('.btn-set-end, .btn-set-end-header').forEach(btn => {
-        btn.classList.add('active');
-      });
-      
-      // Automatically calculate route if both points are set
-      if (routeState.startPoint && routeState.endPoint) {
-        import('./routing.js').then(({ calculateRoute }) => {
-          calculateRoute(map, routeState.startPoint, routeState.endPoint, routeState.waypoints);
-        });
-      }
+      map.flyTo({ center: [lng, lat], zoom: 14 });
     });
   }
 
   if (endInput) {
-    endGeocoderControl = setupRoutingInputGeocoder(endInput, map, ({ lng, lat, address }) => {
-      // Address is already set in input by geocoder, just update the point
-      routeState.endPoint = [lng, lat];
-      updateMarkers(map);
-      map.flyTo({ center: [lng, lat], zoom: 14 });
-      
-      // Remove active class from both original and header buttons
-      document.querySelectorAll('.btn-set-end, .btn-set-end-header').forEach(btn => {
-        btn.classList.remove('active');
+    endGeocoderControl = setupRoutingInputGeocoder(endInput, map, async ({ lng, lat, address }) => {
+      // Use centralized setEndPoint function with geocoder options
+      await setEndPoint(map, { lng, lat }, {
+        fromGeocoder: true,
+        address: address
       });
-      
-      // Automatically calculate route if both points are set
-      if (routeState.startPoint && routeState.endPoint) {
-        import('./routing.js').then(({ calculateRoute }) => {
-          calculateRoute(map, routeState.startPoint, routeState.endPoint, routeState.waypoints);
-        });
-      }
+      routeState.isSelectingEnd = false;
+      map.getCanvas().style.cursor = '';
+      map.flyTo({ center: [lng, lat], zoom: 14 });
     });
   }
   
@@ -608,15 +573,20 @@ export function setupUIHandlers(map) {
   }
 }
 
-export function setStartPoint(map, lngLat, fromGeocoder = false) {
+export async function setStartPoint(map, lngLat, options = {}) {
+  const { fromGeocoder = false, address = null, autoActivateEnd = false } = options;
+  
   routeState.startPoint = [lngLat.lng, lngLat.lat];
   updateMarkers(map);
   
   const startInput = document.getElementById('start-input');
   if (startInput) {
     if (fromGeocoder) {
-      // Address will be set by geocoder callback, don't override
-      // But mark as from map click if not from geocoder
+      // Address is provided by geocoder, use it
+      if (address) {
+        routeState.startAddress = address;
+      }
+      // Mark as from geocoder (not map click)
       if (window.startGeocoderControl) {
         window.startGeocoderControl.setFromMapClick(false);
       }
@@ -626,8 +596,28 @@ export function setStartPoint(map, lngLat, fromGeocoder = false) {
       if (window.startGeocoderControl) {
         window.startGeocoderControl.setFromMapClick(true);
       }
+      // Fetch address for tooltip
+      routeState.startAddress = await reverseGeocode(lngLat.lng, lngLat.lat);
+      updateCoordinateTooltips();
     }
   }
+  
+  // Automatically activate end point selection mode if requested
+  if (autoActivateEnd) {
+    routeState.isSelectingStart = false;
+    routeState.isSelectingEnd = true;
+    map.getCanvas().style.cursor = 'crosshair';
+    // Remove active class from both original and header buttons
+    document.querySelectorAll('.btn-set-start, .btn-set-start-header').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    // Add active class to end buttons
+    document.querySelectorAll('.btn-set-end, .btn-set-end-header').forEach(btn => {
+      btn.classList.add('active');
+    });
+  }
+  
+  updateCoordinateTooltips();
   
   // Automatically calculate route if both points are set
   if (routeState.startPoint && routeState.endPoint) {
@@ -638,15 +628,20 @@ export function setStartPoint(map, lngLat, fromGeocoder = false) {
   }
 }
 
-export function setEndPoint(map, lngLat, fromGeocoder = false) {
+export async function setEndPoint(map, lngLat, options = {}) {
+  const { fromGeocoder = false, address = null } = options;
+  
   routeState.endPoint = [lngLat.lng, lngLat.lat];
   updateMarkers(map);
   
   const endInput = document.getElementById('end-input');
   if (endInput) {
     if (fromGeocoder) {
-      // Address will be set by geocoder callback, don't override
-      // But mark as from map click if not from geocoder
+      // Address is provided by geocoder, use it
+      if (address) {
+        routeState.endAddress = address;
+      }
+      // Mark as from geocoder (not map click)
       if (window.endGeocoderControl) {
         window.endGeocoderControl.setFromMapClick(false);
       }
@@ -656,8 +651,18 @@ export function setEndPoint(map, lngLat, fromGeocoder = false) {
       if (window.endGeocoderControl) {
         window.endGeocoderControl.setFromMapClick(true);
       }
+      // Fetch address for tooltip
+      routeState.endAddress = await reverseGeocode(lngLat.lng, lngLat.lat);
+      updateCoordinateTooltips();
     }
   }
+  
+  // Remove active class from both original and header buttons
+  document.querySelectorAll('.btn-set-end, .btn-set-end-header').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  updateCoordinateTooltips();
   
   // Automatically calculate route if both points are set
   if (routeState.startPoint && routeState.endPoint) {
@@ -711,7 +716,7 @@ export function updateMarkers(map) {
       el.style.cursor = 'grabbing';
     });
     
-    routeState.startMarker.on('dragend', () => {
+    routeState.startMarker.on('dragend', async () => {
       el.style.cursor = 'grab';
       const lngLat = routeState.startMarker.getLngLat();
       routeState.startPoint = [lngLat.lng, lngLat.lat];
@@ -720,6 +725,10 @@ export function updateMarkers(map) {
       if (startInput) {
         startInput.value = `${lngLat.lat.toFixed(5)}, ${lngLat.lng.toFixed(5)}`;
       }
+      
+      // Update address for moved start point
+      routeState.startAddress = await reverseGeocode(lngLat.lng, lngLat.lat);
+      updateCoordinateTooltips();
       
       // Recalculate route if end point exists
       if (routeState.endPoint) {
@@ -758,7 +767,7 @@ export function updateMarkers(map) {
       el.style.cursor = 'grabbing';
     });
     
-    routeState.endMarker.on('dragend', () => {
+    routeState.endMarker.on('dragend', async () => {
       el.style.cursor = 'grab';
       const lngLat = routeState.endMarker.getLngLat();
       routeState.endPoint = [lngLat.lng, lngLat.lat];
@@ -767,6 +776,10 @@ export function updateMarkers(map) {
       if (endInput) {
         endInput.value = `${lngLat.lat.toFixed(5)}, ${lngLat.lng.toFixed(5)}`;
       }
+      
+      // Update address for moved end point
+      routeState.endAddress = await reverseGeocode(lngLat.lng, lngLat.lat);
+      updateCoordinateTooltips();
       
       // Recalculate route if start point exists
       if (routeState.startPoint) {
@@ -808,7 +821,7 @@ export function updateMarkers(map) {
       el.style.cursor = 'grabbing';
     });
     
-    marker.on('dragend', () => {
+    marker.on('dragend', async () => {
       el.style.cursor = 'grab';
       const lngLat = marker.getLngLat();
       // Preserve SVG ID when updating coordinates
@@ -817,6 +830,11 @@ export function updateMarkers(map) {
         lat: lngLat.lat,
         svgId: waypoint.svgId
       };
+      
+      // Update address for moved waypoint
+      const address = await reverseGeocode(lngLat.lng, lngLat.lat);
+      routeState.waypointAddresses[index] = address;
+      
       updateWaypointsList();
       
       // Recalculate route if both start and end points exist
@@ -993,6 +1011,9 @@ export function updateWaypointsList() {
     setupWaypointDragHandlers(item, index, waypointsList);
     setupWaypointRemoveHandler(item, index);
   });
+  
+  // Update tooltips after list is updated
+  updateCoordinateTooltips();
 }
 
 // ============================================================================
@@ -1034,9 +1055,11 @@ function reorderWaypoint(draggedIndex, dropIndex, mouseY, dropTarget) {
   // Calculate target index in the original array
   let targetIndex = dropIndex + (insertAfter ? 1 : 0);
   
-  // Remove element from array
+  // Remove element from array (both waypoint and address)
   const waypoints = routeState.waypoints;
+  const addresses = routeState.waypointAddresses;
   const [moved] = waypoints.splice(draggedIndex, 1);
+  const [movedAddress] = addresses.splice(draggedIndex, 1);
   
   // Adjust target index if element was removed before target position
   if (draggedIndex < targetIndex) {
@@ -1046,8 +1069,9 @@ function reorderWaypoint(draggedIndex, dropIndex, mouseY, dropTarget) {
   // Clamp to valid range (using new array length)
   targetIndex = Math.max(0, Math.min(targetIndex, waypoints.length));
   
-  // Insert element at target position
+  // Insert element at target position (both waypoint and address)
   waypoints.splice(targetIndex, 0, moved);
+  addresses.splice(targetIndex, 0, movedAddress);
   
   // Mark as manually sorted (disables automatic optimization)
   routeState.waypointsManuallySorted = true;
@@ -1084,7 +1108,7 @@ function handleWaypointsReordered() {
 }
 
 // Add waypoint
-export function addWaypoint(map, lngLat) {
+export async function addWaypoint(map, lngLat) {
   // Create waypoint object with coordinates and random SVG
   const waypoint = {
     lng: lngLat.lng,
@@ -1094,8 +1118,14 @@ export function addWaypoint(map, lngLat) {
   routeState.waypoints.push(waypoint);
   // Reset manual sort flag when adding new waypoint - allows optimization again
   routeState.waypointsManuallySorted = false;
+  
+  // Fetch address for tooltip
+  const address = await reverseGeocode(lngLat.lng, lngLat.lat);
+  routeState.waypointAddresses.push(address);
+  
   updateMarkers(map);
   updateWaypointsList();
+  updateCoordinateTooltips();
   
   // Recalculate route if both start and end points exist
   if (routeState.startPoint && routeState.endPoint) {
@@ -1108,6 +1138,7 @@ export function addWaypoint(map, lngLat) {
 // Remove waypoint
 export function removeWaypoint(index) {
   routeState.waypoints.splice(index, 1);
+  routeState.waypointAddresses.splice(index, 1);
   
   // Reset manual sort flag if no waypoints left - allows optimization for new waypoints
   if (routeState.waypoints.length === 0) {
@@ -1118,6 +1149,7 @@ export function removeWaypoint(index) {
   if (map) {
     updateMarkers(map);
     updateWaypointsList();
+    updateCoordinateTooltips();
     
     // Recalculate route if both start and end points exist
     if (routeState.startPoint && routeState.endPoint) {
@@ -1145,5 +1177,37 @@ export async function geocodeAddress(query) {
     console.error('Geocoding error:', error);
   }
   return null;
+}
+
+/**
+ * Update tooltips for coordinate elements (start, end, waypoints)
+ * Shows address on hover if available
+ */
+export function updateCoordinateTooltips() {
+  // Update start point tooltip
+  const startInput = document.getElementById('start-input');
+  if (startInput && routeState.startAddress) {
+    startInput.title = routeState.startAddress;
+  } else if (startInput) {
+    startInput.title = '';
+  }
+  
+  // Update end point tooltip
+  const endInput = document.getElementById('end-input');
+  if (endInput && routeState.endAddress) {
+    endInput.title = routeState.endAddress;
+  } else if (endInput) {
+    endInput.title = '';
+  }
+  
+  // Update waypoint coordinate tooltips
+  const waypointCoords = document.querySelectorAll('.waypoint-coords');
+  waypointCoords.forEach((coordEl, index) => {
+    if (routeState.waypointAddresses[index]) {
+      coordEl.title = routeState.waypointAddresses[index];
+    } else {
+      coordEl.title = '';
+    }
+  });
 }
 

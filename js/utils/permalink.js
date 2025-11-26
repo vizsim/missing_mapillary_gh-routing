@@ -16,7 +16,10 @@ export class Permalink {
     this.isUpdating = false;
     this.pendingRouteCalculation = false; // Flag to track if route should be calculated after map loads
     this.setupEventListeners();
-    this.loadFromURL();
+    // Load from URL asynchronously (don't await to avoid blocking constructor)
+    this.loadFromURL().catch(err => {
+      console.error('Error loading from URL:', err);
+    });
   }
 
   setupEventListeners() {
@@ -176,7 +179,7 @@ export class Permalink {
     window.history.replaceState({}, '', newURL);
   }
 
-  loadFromURL() {
+  async loadFromURL() {
     const params = new URLSearchParams(window.location.search);
     
     // Load map state
@@ -258,7 +261,10 @@ export class Permalink {
     // Load waypoints
     const waypointParams = params.getAll('waypoint');
     routeState.waypoints = [];
-    waypointParams.forEach(waypointParam => {
+    routeState.waypointAddresses = [];
+    
+    // Load waypoints and fetch addresses asynchronously
+    const waypointPromises = waypointParams.map(async (waypointParam) => {
       // Support both / and , separators (backwards compatibility)
       const separator = waypointParam.includes('/') ? '/' : ',';
       const [lat, lng] = waypointParam.split(separator).map(parseFloat);
@@ -269,13 +275,34 @@ export class Permalink {
           lat: lat,
           svgId: getRandomWaypointSvg()
         });
+        
+        // Fetch address for tooltip
+        const { reverseGeocode } = await import('../utils/geocoder.js');
+        const address = await reverseGeocode(lng, lat);
+        routeState.waypointAddresses.push(address);
       }
     });
+    
+    // Wait for all waypoint addresses to be fetched
+    await Promise.all(waypointPromises);
+    
+    // Also fetch addresses for start and end points if they exist
+    if (routeState.startPoint) {
+      const { reverseGeocode } = await import('../utils/geocoder.js');
+      routeState.startAddress = await reverseGeocode(routeState.startPoint[0], routeState.startPoint[1]);
+    }
+    
+    if (routeState.endPoint) {
+      const { reverseGeocode } = await import('../utils/geocoder.js');
+      routeState.endAddress = await reverseGeocode(routeState.endPoint[0], routeState.endPoint[1]);
+    }
     
     // Update markers if points were loaded
     if (routeState.startPoint || routeState.endPoint || routeState.waypoints.length > 0) {
       updateMarkers(this.map);
       updateWaypointsList();
+      const { updateCoordinateTooltips } = await import('../routing/routingUI.js');
+      updateCoordinateTooltips();
     }
     
     // Load mapillary_weight (for car_customizable profile)
