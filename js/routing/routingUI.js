@@ -670,7 +670,7 @@ export function updateMarkers(map) {
     el.innerHTML = `
       <svg width="28" height="28" viewBox="0 0 24 24" fill="#f59e0b" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-        <text x="12" y="14" text-anchor="middle" fill="white" font-size="10" font-weight="normal">${index + 1}</text>
+        <text x="12" y="14" text-anchor="middle" fill="white" font-size="10" font-family="Arial, sans-serif" stroke="white" stroke-width="0.4">${index + 1}</text>
       </svg>
     `;
     el.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))';
