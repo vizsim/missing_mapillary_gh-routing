@@ -740,7 +740,7 @@ function createWaypointItemHTML(index, waypoint) {
       </svg>
     </span>
     <span class="waypoint-number">${index + 1}</span>
-    <span class="waypoint-coords">${waypoint[1].toFixed(5)}, ${waypoint[0].toFixed(5)}</span>
+    <span class="waypoint-coords">${waypoint[1].toFixed(4)}, ${waypoint[0].toFixed(4)}</span>
     <button class="btn-remove-waypoint" data-index="${index}" title="Zwischenpunkt entfernen">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="18" y1="6" x2="6" y2="18"></line>

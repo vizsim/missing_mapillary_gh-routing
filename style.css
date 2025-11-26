@@ -1221,6 +1221,8 @@ code {
   cursor: move;
   transition: all 0.2s;
   user-select: none;
+  width: calc(100% - 36px); /* Match header field width: 100% - button width (32px) - gap (4px) */
+  box-sizing: border-box;
 }
 
 .waypoint-item:hover {
@@ -1287,6 +1289,10 @@ code {
   color: #6b7280;
   font-family: 'Courier New', monospace;
   font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .btn-remove-waypoint {
@@ -2017,6 +2023,7 @@ input[type="range"].slider::-moz-range-thumb,
   .waypoint-item {
     padding: 8px 10px;
     min-height: 44px;
+    width: calc(100% - 48px); /* Match header field width on mobile: 100% - button width (44px) - gap (4px) */
   }
 
   .waypoint-number {
