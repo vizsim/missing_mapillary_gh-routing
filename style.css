@@ -1238,6 +1238,18 @@ code {
   border-top-style: dashed;
 }
 
+.waypoint-item.drag-over.drag-over-after {
+  border-top: none;
+  border-bottom: 2px solid #3b82f6;
+  border-bottom-style: dashed;
+}
+
+.waypoint-item.drag-over.drag-over-before {
+  border-top: 2px solid #3b82f6;
+  border-top-style: dashed;
+  border-bottom: none;
+}
+
 .waypoint-drag-handle {
   display: flex;
   align-items: center;

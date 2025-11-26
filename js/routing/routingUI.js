@@ -717,7 +717,143 @@ export function updateMarkers(map) {
   // Waypoints container is always visible now, no need to hide/show
 }
 
-// Update waypoints list in UI
+// ============================================================================
+// Waypoint List UI
+// ============================================================================
+
+/**
+ * Create HTML template for a waypoint list item
+ * @param {number} index - Waypoint index (0-based)
+ * @param {Array<number>} waypoint - Waypoint coordinates [lng, lat]
+ * @returns {string} HTML string
+ */
+function createWaypointItemHTML(index, waypoint) {
+  return `
+    <span class="waypoint-drag-handle" title="Zum Verschieben ziehen">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="9" cy="12" r="1"></circle>
+        <circle cx="9" cy="5" r="1"></circle>
+        <circle cx="9" cy="19" r="1"></circle>
+        <circle cx="15" cy="12" r="1"></circle>
+        <circle cx="15" cy="5" r="1"></circle>
+        <circle cx="15" cy="19" r="1"></circle>
+      </svg>
+    </span>
+    <span class="waypoint-number">${index + 1}</span>
+    <span class="waypoint-coords">${waypoint[1].toFixed(5)}, ${waypoint[0].toFixed(5)}</span>
+    <button class="btn-remove-waypoint" data-index="${index}" title="Zwischenpunkt entfernen">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  `;
+}
+
+/**
+ * Setup drag & drop event handlers for a waypoint item
+ * @param {HTMLElement} item - The waypoint item element
+ * @param {number} index - Waypoint index
+ * @param {HTMLElement} waypointsList - Container element
+ */
+function setupWaypointDragHandlers(item, index, waypointsList) {
+  // Drag start
+  item.addEventListener('dragstart', (e) => {
+    item.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', index.toString());
+  });
+  
+  // Drag end
+  item.addEventListener('dragend', (e) => {
+    item.classList.remove('dragging');
+    
+    // Clear pending timeout
+    if (item._dragOverTimeout) {
+      clearTimeout(item._dragOverTimeout);
+      item._dragOverTimeout = null;
+    }
+    
+    // Remove all drop indicators
+    document.querySelectorAll('.waypoint-item').forEach(el => {
+      el.classList.remove('drag-over', 'drag-over-before', 'drag-over-after');
+      el._dragOverTimeout = null;
+    });
+    
+    // Update UI and recalculate route (after drag is complete to prevent flickering)
+    handleWaypointsReordered();
+  });
+  
+  // Drag over
+  item.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    
+    const draggingItem = document.querySelector('.waypoint-item.dragging');
+    if (!draggingItem || draggingItem === item) return;
+    
+    // Remove drag-over classes from other items (throttled to reduce flickering)
+    if (!item._dragOverTimeout) {
+      const items = Array.from(waypointsList.querySelectorAll('.waypoint-item:not(.dragging)'));
+      items.forEach(el => {
+        if (el !== item) {
+          el.classList.remove('drag-over', 'drag-over-before', 'drag-over-after');
+        }
+      });
+    }
+    
+    // Clear existing timeout
+    if (item._dragOverTimeout) {
+      clearTimeout(item._dragOverTimeout);
+    }
+    
+    // Throttle visual update to reduce flickering
+    item._dragOverTimeout = setTimeout(() => {
+      updateDragOverIndicator(item, e.clientY);
+      item._dragOverTimeout = null;
+    }, 10);
+  });
+  
+  // Drop
+  item.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
+    const dropIndex = parseInt(item.dataset.index, 10);
+    
+    if (draggedIndex === dropIndex) return;
+    
+    reorderWaypoint(draggedIndex, dropIndex, e.clientY, item);
+  });
+}
+
+/**
+ * Setup remove button handler for a waypoint item
+ * @param {HTMLElement} item - The waypoint item element
+ * @param {number} index - Waypoint index
+ */
+function setupWaypointRemoveHandler(item, index) {
+  const removeBtn = item.querySelector('.btn-remove-waypoint');
+  if (!removeBtn) return;
+  
+  // Prevent button from triggering drag
+  removeBtn.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+  });
+  
+  removeBtn.addEventListener('dragstart', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+  });
+  
+  removeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    removeWaypoint(index);
+  });
+}
+
+/**
+ * Update waypoints list in UI
+ */
 export function updateWaypointsList() {
   const waypointsList = document.getElementById('waypoints-list');
   if (!waypointsList) return;
@@ -729,124 +865,102 @@ export function updateWaypointsList() {
     item.className = 'waypoint-item';
     item.draggable = true;
     item.dataset.index = index;
-    item.innerHTML = `
-      <span class="waypoint-drag-handle" title="Zum Verschieben ziehen">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="9" cy="12" r="1"></circle>
-          <circle cx="9" cy="5" r="1"></circle>
-          <circle cx="9" cy="19" r="1"></circle>
-          <circle cx="15" cy="12" r="1"></circle>
-          <circle cx="15" cy="5" r="1"></circle>
-          <circle cx="15" cy="19" r="1"></circle>
-        </svg>
-      </span>
-      <span class="waypoint-number">${index + 1}</span>
-      <span class="waypoint-coords">${waypoint[1].toFixed(5)}, ${waypoint[0].toFixed(5)}</span>
-      <button class="btn-remove-waypoint" data-index="${index}" title="Zwischenpunkt entfernen">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-    `;
+    item.innerHTML = createWaypointItemHTML(index, waypoint);
+    
     waypointsList.appendChild(item);
     
-    // Drag & Drop handlers
-    item.addEventListener('dragstart', (e) => {
-      item.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/html', item.outerHTML);
-      e.dataTransfer.setData('text/plain', index.toString());
-    });
-    
-    item.addEventListener('dragend', (e) => {
-      item.classList.remove('dragging');
-      // Remove all drop indicators
-      document.querySelectorAll('.waypoint-item').forEach(el => {
-        el.classList.remove('drag-over');
-      });
-    });
-    
-    item.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      
-      const draggingItem = document.querySelector('.waypoint-item.dragging');
-      if (!draggingItem || draggingItem === item) return;
-      
-      const items = Array.from(waypointsList.querySelectorAll('.waypoint-item:not(.dragging)'));
-      const afterElement = getDragAfterElement(waypointsList, e.clientY);
-      
-      // Remove all drag-over classes
-      items.forEach(el => el.classList.remove('drag-over'));
-      
-      if (afterElement == null) {
-        item.classList.add('drag-over');
-      } else {
-        afterElement.classList.add('drag-over');
-      }
-    });
-    
-    item.addEventListener('drop', (e) => {
-      e.preventDefault();
-      const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
-      const dropIndex = parseInt(item.dataset.index);
-      
-      if (draggedIndex === dropIndex) return;
-      
-      // Reorder waypoints
-      const draggedWaypoint = routeState.waypoints[draggedIndex];
-      routeState.waypoints.splice(draggedIndex, 1);
-      routeState.waypoints.splice(dropIndex, 0, draggedWaypoint);
-      
-      // Mark as manually sorted - this disables automatic optimization
-      routeState.waypointsManuallySorted = true;
-      
-      // Update UI
-      updateWaypointsList();
-      updateMarkers(routeState.mapInstance);
-      
-      // Recalculate route if both start and end points exist
-      if (routeState.startPoint && routeState.endPoint) {
-        import('./routing.js').then(({ calculateRoute }) => {
-          calculateRoute(routeState.mapInstance, routeState.startPoint, routeState.endPoint, routeState.waypoints);
-        });
-      }
-    });
-    
-    // Remove button handler
-    const removeBtn = item.querySelector('.btn-remove-waypoint');
-    if (removeBtn) {
-      // Prevent button from triggering drag
-      removeBtn.addEventListener('mousedown', (e) => {
-        e.stopPropagation();
-      });
-      removeBtn.addEventListener('dragstart', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-      });
-      removeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        removeWaypoint(index);
-      });
-    }
+    // Setup event handlers
+    setupWaypointDragHandlers(item, index, waypointsList);
+    setupWaypointRemoveHandler(item, index);
   });
 }
 
-// Helper function to determine where to insert dragged item
-function getDragAfterElement(container, y) {
-  const draggableElements = [...container.querySelectorAll('.waypoint-item:not(.dragging)')];
+// ============================================================================
+// Waypoint Drag & Drop Helpers
+// ============================================================================
+
+/**
+ * Update drag-over visual indicator on drop target
+ * @param {HTMLElement} item - The drop target element
+ * @param {number} mouseY - Mouse Y position
+ */
+function updateDragOverIndicator(item, mouseY) {
+  const rect = item.getBoundingClientRect();
+  const itemCenterY = rect.top + rect.height / 2;
+  const insertAfter = mouseY > itemCenterY;
   
-  return draggableElements.reduce((closest, child) => {
-    const box = child.getBoundingClientRect();
-    const offset = y - box.top - box.height / 2;
-    
-    if (offset < 0 && offset > closest.offset) {
-      return { offset: offset, element: child };
-    } else {
-      return closest;
-    }
-  }, { offset: Number.NEGATIVE_INFINITY }).element;
+  item.classList.add('drag-over');
+  if (insertAfter) {
+    item.classList.add('drag-over-after');
+    item.classList.remove('drag-over-before');
+  } else {
+    item.classList.add('drag-over-before');
+    item.classList.remove('drag-over-after');
+  }
+}
+
+/**
+ * Reorder waypoint in array based on drag & drop
+ * @param {number} draggedIndex - Original index of dragged waypoint
+ * @param {number} dropIndex - Index of drop target
+ * @param {number} mouseY - Mouse Y position for determining insert position
+ * @param {HTMLElement} dropTarget - The drop target element
+ */
+function reorderWaypoint(draggedIndex, dropIndex, mouseY, dropTarget) {
+  // Determine if we should insert before or after the drop target
+  const rect = dropTarget.getBoundingClientRect();
+  const insertAfter = mouseY > rect.top + rect.height / 2;
+  
+  // Calculate target index in the original array
+  let targetIndex = dropIndex + (insertAfter ? 1 : 0);
+  
+  // Remove element from array
+  const waypoints = routeState.waypoints;
+  const [moved] = waypoints.splice(draggedIndex, 1);
+  
+  // Adjust target index if element was removed before target position
+  if (draggedIndex < targetIndex) {
+    targetIndex--;
+  }
+  
+  // Clamp to valid range (using new array length)
+  targetIndex = Math.max(0, Math.min(targetIndex, waypoints.length));
+  
+  // Insert element at target position
+  waypoints.splice(targetIndex, 0, moved);
+  
+  // Mark as manually sorted (disables automatic optimization)
+  routeState.waypointsManuallySorted = true;
+}
+
+/**
+ * Handle waypoints reordering: update UI and recalculate route
+ * Called after drag & drop is complete to prevent flickering
+ */
+function handleWaypointsReordered() {
+  // Don't update UI if still dragging (prevents flickering)
+  const isDragging = document.querySelector('.waypoint-item.dragging') !== null;
+  if (isDragging) {
+    return;
+  }
+  
+  // Update UI
+  updateWaypointsList();
+  updateMarkers(routeState.mapInstance);
+  
+  // Recalculate route if both start and end points exist
+  if (routeState.startPoint && routeState.endPoint) {
+    requestAnimationFrame(() => {
+      import('./routing.js').then(({ calculateRoute }) => {
+        calculateRoute(
+          routeState.mapInstance,
+          routeState.startPoint,
+          routeState.endPoint,
+          routeState.waypoints
+        );
+      });
+    });
+  }
 }
 
 // Add waypoint
