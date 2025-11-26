@@ -11,7 +11,10 @@ export function setupRouteHover(map) {
   });
   
   map.on('mouseenter', 'route-layer', (e) => {
-    map.getCanvas().style.cursor = 'pointer';
+    // Only change cursor if route is not hidden
+    if (!window.routeIsHidden) {
+      map.getCanvas().style.cursor = 'pointer';
+    }
   });
   
   map.on('mouseleave', 'route-layer', () => {
@@ -79,6 +82,19 @@ export function setupRouteHover(map) {
   });
   
   map.on('mousemove', 'route-layer', (e) => {
+    // Don't show popup or hover effects if route is hidden
+    if (window.routeIsHidden) {
+      popup.remove();
+      // Clear hovered segment
+      if (map.getSource('route-hover-segment')) {
+        map.getSource('route-hover-segment').setData({
+          type: 'FeatureCollection',
+          features: []
+        });
+      }
+      return;
+    }
+    
     if (routeState.currentRouteData && e.features && e.features.length > 0) {
       // Use original coordinates from routeState, not segment coordinates
       const { coordinates: originalCoordinates } = routeState.currentRouteData;
