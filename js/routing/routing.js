@@ -1184,10 +1184,10 @@ export function clearRoute(map) {
     comparisonContainer.style.display = 'none';
   }
   
-  const startBtn = document.getElementById('set-start');
-  const endBtn = document.getElementById('set-end');
-  if (startBtn) startBtn.classList.remove('active');
-  if (endBtn) endBtn.classList.remove('active');
+  // Remove active class from all start/end buttons (original and header)
+  document.querySelectorAll('.btn-set-start, .btn-set-start-header, .btn-set-end, .btn-set-end-header').forEach(btn => {
+    btn.classList.remove('active');
+  });
   
   const startInput = document.getElementById('start-input');
   const endInput = document.getElementById('end-input');
@@ -1210,4 +1210,10 @@ export function clearRoute(map) {
   if (map) {
     map.setPaintProperty('route-layer', 'line-color', '#3b82f6');
   }
+  
+  // Update UI to clear waypoints list and markers
+  import('./routingUI.js').then(({ updateMarkers, updateWaypointsList }) => {
+    updateMarkers(map);
+    updateWaypointsList();
+  });
 }
