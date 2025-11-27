@@ -438,6 +438,57 @@
     </div>
   </div>
 
+  <!-- Context Menu -->
+  <div id="context-menu" class="context-menu hidden">
+    <div class="context-menu-item" id="context-menu-set-start">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="#10b981"></path>
+        <g transform="translate(12, 10) scale(0.6) translate(-12, -12)">
+          <path d="m9.9 16.97 7.436-7.436a8 8 0 0 0 2.145-3.89l.318-1.401-1.402.317a8 8 0 0 0-3.89 2.146L9.192 12.02m.707 4.95 2.122 3.535c1.178-1.178 2.828-2.828 0-5.657L9.899 16.97zm0 0-2.828-2.829m0 0L3.536 12.02c1.178-1.179 2.828-2.829 5.656 0m-2.12 2.121 2.12-2.121M4.95 16.263s-1.703 2.54-.707 3.536c.995.996 3.535-.707 3.535-.707" fill="white" stroke="white" stroke-width="1.5"/>
+        </g>
+      </svg>
+      <span>Startpunkt setzen</span>
+    </div>
+    <div class="context-menu-item" id="context-menu-set-end">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="#ef4444"></path>
+        <g transform="translate(12, 10) scale(0.4) translate(-16, -16)">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="white" stroke-miterlimit="10">
+            <line x1="6" y1="28" x2="6" y2="5" stroke="white" stroke-width="3" stroke-linecap="round"/>
+            <polyline points="6,5 26,5 26,19 6,19" stroke="white" stroke-width="1.5"/>
+            <rect x="6" y="5" width="10" height="7" fill="white"/>
+            <rect x="16" y="12" width="10" height="7" fill="white"/>
+          </svg>
+        </g>
+      </svg>
+      <span>Zielpunkt setzen</span>
+    </div>
+    <div class="context-menu-item" id="context-menu-set-waypoint">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="16"></line>
+        <line x1="8" y1="12" x2="16" y2="12"></line>
+      </svg>
+      <span>Zwischenpunkt setzen</span>
+    </div>
+    <div class="context-menu-separator"></div>
+    <a class="context-menu-item" id="context-menu-osm-query" target="_blank" rel="noopener noreferrer">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="16" x2="12" y2="12"></line>
+        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+      </svg>
+      <span>OSM Objektabfrage</span>
+    </a>
+    <a class="context-menu-item" id="context-menu-mapillary" target="_blank" rel="noopener noreferrer">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+        <circle cx="12" cy="13" r="4"></circle>
+      </svg>
+      <span>zu Mapillary</span>
+    </a>
+  </div>
+
   <!-- Attribution Footer
   <div id="attribution-footer" style="position: absolute; bottom: 80px; left: 10px; background: rgba(255, 255, 255, 0.9); padding: 8px 12px; border-radius: 4px; font-size: 11px; z-index: 1; font-family: sans-serif; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
     Höhenmodelle: <a href="https://sonny.4lima.de" target="_blank" rel="noopener">Sonny</a> (CC BY 4.0)

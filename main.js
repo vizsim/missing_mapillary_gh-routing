@@ -5,6 +5,7 @@ import { setupRouting } from './js/routing/routing.js';
 import { setupBaseLayerControls } from './js/ui/setupBaseLayerControls.js';
 import { setupPanelPositioning } from './js/ui/panelPositioning.js';
 import { setupToggleHandlers } from './js/ui/toggleHandlers.js';
+import { setupContextMenu } from './js/ui/contextMenu.js';
 
 // 📦 Map Data
 import { addBasicSources } from './js/mapdata/sources.js';
@@ -95,6 +96,7 @@ async function initMap() {
     initializeMapModules(map);
     setupUI(map);
     setupRouting(map);
+    setupContextMenu(map);
     updateExternalLinks(map);
   });
 
