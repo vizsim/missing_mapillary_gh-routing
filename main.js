@@ -82,7 +82,38 @@ async function initMap() {
     initializeMapModules(map);
     setupUI(map);
     setupRouting(map);
+    updateExternalLinks(map);
   });
+
+  // Update external links on map move/zoom
+  map.on('moveend', () => updateExternalLinks(map));
+  map.on('zoomend', () => updateExternalLinks(map));
+}
+
+function updateExternalLinks(map) {
+  if (!map) return;
+
+  const center = map.getCenter();
+  const zoom = map.getZoom();
+
+  // Update radinfra link
+  const radinfraLink = document.getElementById('radinfra-link');
+  if (radinfraLink) {
+    const lat = center.lat.toFixed(3);
+    const lng = center.lng.toFixed(3);
+    // Format: ?map={zoom}/{lat}/{lng}&config=1v92rco.7h39.4pt3i8&v=2
+    radinfraLink.href = `https://tilda-geo.de/regionen/radinfra?map=${zoom}/${lat}/${lng}&config=1v92rco.7h39.4pt3i8&v=2`;
+  }
+
+  // Update osm-verkehrswende link
+  const osmLink = document.getElementById('osm-verkehrswende-link');
+  if (osmLink) {
+    const lat = center.lat.toFixed(2);
+    const lng = center.lng.toFixed(2);
+    // Format: ?map={zoom}/{lng}/{lat}&anzeige=current_all
+    // Note: order is zoom/lng/lat (different from radinfra)
+    osmLink.href = `https://www.osm-verkehrswende.org/mapillary/map/?map=${zoom}/${lng}/${lat}&anzeige=current_all`;
+  }
 }
 
 
