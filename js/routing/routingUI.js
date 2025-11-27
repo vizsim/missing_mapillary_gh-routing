@@ -10,6 +10,7 @@ import {
   updateMapillaryPriority
 } from './customModel.js';
 import { setupRoutingInputGeocoder, reverseGeocode } from '../utils/geocoder.js';
+import { ERROR_MESSAGES, MAPILLARY_SLIDER_VALUES } from '../utils/constants.js';
 
 // Available SVG files for waypoints
 const WAYPOINT_SVGS = [
@@ -98,7 +99,7 @@ export function setupUIHandlers(map) {
               const sliderValue = document.getElementById('slider-value');
               if (slider) {
                 // Find closest predefined value for slider position
-                const sliderValues = [0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.6, 1.0];
+                const sliderValues = MAPILLARY_SLIDER_VALUES;
                 let closestIndex = 0;
                 let minDiff = Math.abs(multiplyBy - sliderValues[0]);
                 for (let i = 1; i < sliderValues.length; i++) {
@@ -278,7 +279,7 @@ export function setupUIHandlers(map) {
           calculateRoute(map, routeState.startPoint, routeState.endPoint, routeState.waypoints);
         });
       } else {
-        alert('Bitte Start- und Endpunkt setzen');
+        alert(ERROR_MESSAGES.MISSING_START_END);
       }
     });
   }
@@ -295,8 +296,8 @@ export function setupUIHandlers(map) {
   const mapillarySlider = document.getElementById('mapillary-priority-slider');
   const sliderValueDisplay = document.getElementById('slider-value');
   
-  // Define predefined slider values (only these can be selected by dragging)
-  const sliderValues = [0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.6, 1.0];
+  // Use predefined slider values from constants
+  const sliderValues = MAPILLARY_SLIDER_VALUES;
   
   // Helper functions to convert between slider index (0-9) and actual value
   const sliderIndexToValue = (index) => {

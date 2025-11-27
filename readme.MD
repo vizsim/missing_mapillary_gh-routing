@@ -30,7 +30,7 @@
 - **OpenStreetMap**: Basiskartendaten
 - **OSM Verkehrswende**: Mapillary Missing Streets Daten - [osm-verkehrswende.org](https://www.osm-verkehrswende.org)
 - **FixMyCity** / **tilda-geo.de**: Vektortiles für Radinfrastruktur - [tilda-geo.de](https://tilda-geo.de)
-- **MapTiler** (optional): Hillshade und Terrain-Daten
+- **Mapterhorn**: Terrain und Hillshade DEM-Daten - [mapterhorn.com](https://mapterhorn.com)
 - **Sonny's Terrain Models**: Höhenmodelle für Elevation-Daten (CC BY 4.0) - [sonny.4lima.de](https://sonny.4lima.de)
 
 ---
@@ -85,7 +85,7 @@ missing_mapillary_gh-routing/
 
 Die Anwendung kann direkt im Browser geöffnet werden: [https://vizsim.github.io/missing_mapillary_gh-routing/](https://vizsim.github.io/missing_mapillary_gh-routing/)
 
-Die Anwendung nutzt eine eigene GraphHopper-Instanz, die auf [ghroute.duckdns.org](https://ghroute.duckdns.org) gehostet wird.
+Die Anwendung nutzt eine eigene GraphHopper-Instanz, die auf [ghroute.duckdns.org](https://ghroute.duckdns.org) erreichbar ist.
 
 ---
 
@@ -103,4 +103,5 @@ Die Lizenz wird in Kürze hinzugefügt.
 - **Mapillary**: Street View Fotos und Coverage-Daten
 - **OSM Verkehrswende**: Mapillary Missing Streets Daten - [osm-verkehrswende.org](https://www.osm-verkehrswende.org)
 - **FixMyCity** / **tilda-geo.de**: Vektortiles für Radinfrastruktur - [tilda-geo.de](https://tilda-geo.de)
+- **Mapterhorn**: Terrain und Hillshade DEM-Daten - [mapterhorn.com](https://mapterhorn.com)
 - **Sonny's Terrain Models**: Höhenmodelle (CC BY 4.0) - [sonny.4lima.de](https://sonny.4lima.de)

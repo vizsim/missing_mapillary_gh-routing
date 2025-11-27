@@ -54,8 +54,21 @@ if (document.readyState === 'loading') {
     initMap();
 
   } catch (err) {
-    console.error("❌ Konfig konnte nicht geladen werden:", err);
-    // Fallback: ohne API Key starten
+    // Expected behavior: config.js might not exist locally (it's in .gitignore)
+    // Fallback to public config or continue without API key
+    if (isLocalhost && err.message && err.message.includes('Failed to fetch')) {
+      console.warn("⚠️ Lokale config.js nicht gefunden, verwende config.public.js als Fallback");
+      try {
+        const publicConfig = await import('./js/config/config.public.js');
+        ({ MAPTILER_API_KEY } = publicConfig);
+        console.log("🔑 config.public.js geladen (Fallback)");
+      } catch (fallbackErr) {
+        console.warn("⚠️ Konfig konnte nicht geladen werden, starte ohne API Key:", fallbackErr.message);
+      }
+    } else {
+      console.warn("⚠️ Konfig konnte nicht geladen werden, starte ohne API Key:", err.message);
+    }
+    // Continue initialization even without API key
     initMap();
   }
 })();

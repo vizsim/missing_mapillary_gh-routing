@@ -9,6 +9,7 @@ import {
   getMapillaryPriority,
   updateMapillaryPriority
 } from '../routing/customModel.js';
+import { MAPILLARY_SLIDER_VALUES, PERMALINK as PERMALINK_CONFIG } from './constants.js';
 
 export class Permalink {
   constructor(map) {
@@ -55,20 +56,20 @@ export class Permalink {
     };
     
     // Check state changes periodically (debounced)
-    setInterval(checkState, 500);
+    setInterval(checkState, PERMALINK_CONFIG.STATE_CHECK_INTERVAL);
     
     // Also update immediately when encoded type changes
     const encodedSelect = document.getElementById('heightgraph-encoded-select');
     if (encodedSelect) {
       encodedSelect.addEventListener('change', () => {
-        setTimeout(() => this.updateURL(), 100);
+        setTimeout(() => this.updateURL(), PERMALINK_CONFIG.UPDATE_DELAY);
       });
     }
     
     // Update when profile changes
     document.querySelectorAll('.profile-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        setTimeout(() => this.updateURL(), 100);
+        setTimeout(() => this.updateURL(), PERMALINK_CONFIG.UPDATE_DELAY);
       });
     });
   }
@@ -381,7 +382,7 @@ export class Permalink {
               window.setMapillarySliderValue(multiplyBy);
             } else {
               // Find closest predefined value for slider position
-              const sliderValues = [0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.6, 1.0];
+              const sliderValues = MAPILLARY_SLIDER_VALUES;
               let closestIndex = 0;
               let minDiff = Math.abs(multiplyBy - sliderValues[0]);
               for (let i = 1; i < sliderValues.length; i++) {
@@ -438,7 +439,7 @@ export class Permalink {
             // Trigger change event to show layers
             // Retry if layers don't exist yet (they might be created asynchronously)
             let retryCount = 0;
-            const maxRetries = 25; // 25 * 200ms = 5 seconds
+            const maxRetries = PERMALINK_CONFIG.MAX_LAYER_RETRIES;
             const activateMissingStreets = () => {
               const layers = [
                 'missing-streets-missing-roads',
@@ -456,7 +457,7 @@ export class Permalink {
                 // Retry after a short delay
                 retryCount++;
                 if (retryCount < maxRetries) {
-                  setTimeout(activateMissingStreets, 200);
+                  setTimeout(activateMissingStreets, PERMALINK_CONFIG.LAYER_RETRY_DELAY);
                 } else {
                   console.warn('Permalink: Could not activate missingStreets layers - layers not available');
                 }
@@ -475,7 +476,7 @@ export class Permalink {
         // Map not loaded yet, wait for load event
         this.map.once('load', () => {
           // Additional delay to ensure layers are created
-          setTimeout(activateContextLayers, 500);
+          setTimeout(activateContextLayers, PERMALINK_CONFIG.LAYER_ACTIVATION_DELAY);
         });
       }
     }
@@ -495,7 +496,7 @@ export class Permalink {
     // Check if routing sources exist (they should be created by setupRouting)
     // setupRouting is called in map.on('load'), so we need to wait for it
     let retryCount = 0;
-    const maxRetries = 50; // Max 5 seconds (50 * 100ms)
+    const maxRetries = PERMALINK_CONFIG.MAX_ROUTE_RETRIES;
     
     const checkAndCalculate = () => {
       if (this.map.getSource('route') && routeState.startPoint && routeState.endPoint) {
@@ -506,7 +507,7 @@ export class Permalink {
       } else if (this.pendingRouteCalculation && retryCount < maxRetries) {
         // Retry after a short delay if sources don't exist yet
         retryCount++;
-        setTimeout(checkAndCalculate, 100);
+        setTimeout(checkAndCalculate, PERMALINK_CONFIG.ROUTE_RETRY_DELAY);
       } else if (retryCount >= maxRetries) {
         // Give up after max retries
         console.warn('Permalink: Could not calculate route - routing sources not available');

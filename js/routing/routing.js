@@ -15,15 +15,45 @@ import {
 } from './customModel.js';
 import { calculateDistance } from './heightgraph/heightgraphUtils.js';
 import { optimizeWaypoints } from './waypointOptimizer.js';
-
-//const GRAPHHOPPER_URL = 'http://localhost:8989';
-const GRAPHHOPPER_URL = 'https://ghroute.duckdns.org';
+import { generateRouteInfoHTML, displayRouteError, formatTime, formatNumberWithThousandSeparator } from './routeInfoFormatter.js';
+import {
+  GRAPHHOPPER_URL,
+  ERROR_MESSAGES,
+  ROUTE_CALCULATION as ROUTE_CONFIG,
+  COORDINATE_LIMITS,
+  UI_IDS,
+  LAYER_IDS,
+  CONTEXT_LAYER_IDS
+} from '../utils/constants.js';
 
 // Flag to prevent parallel route calculations
 let routeCalculationInProgress = false;
 
 export function isRouteCalculationInProgress() {
   return routeCalculationInProgress;
+}
+
+/**
+ * Get user-friendly error message from error object
+ * @param {Error} error - Error object
+ * @returns {string} User-friendly error message
+ */
+function getUserFriendlyErrorMessage(error) {
+  if (!error) return ERROR_MESSAGES.NETWORK_ERROR;
+  
+  const message = error.message || String(error);
+  
+  if (message === 'OUT_OF_BOUNDS' || 
+      message.includes('PointNotFoundException') || 
+      message.includes('Cannot find point')) {
+    return ERROR_MESSAGES.OUT_OF_BOUNDS;
+  }
+  
+  if (message.includes('Network error') || message.includes('fetch')) {
+    return `${ERROR_MESSAGES.NETWORK_ERROR}: ${message}`;
+  }
+  
+  return message;
 }
 
 // Calculate comparison route with Weight=1 and show differences
@@ -85,7 +115,7 @@ async function calculateComparisonWithWeightOne(map, allPoints, currentPath, cur
   } catch (error) {
     console.error('Error calculating comparison route:', error);
     // Hide comparison on error
-    const comparisonContainer = document.getElementById('mapillary-weight-comparison');
+    const comparisonContainer = document.getElementById(UI_IDS.COMPARISON_CONTAINER);
     if (comparisonContainer) {
       comparisonContainer.style.display = 'none';
     }
@@ -222,7 +252,7 @@ function displayComparison(
   timeDiff, 
   mapillaryDistanceDiff
 ) {
-  const comparisonContainer = document.getElementById('mapillary-weight-comparison');
+  const comparisonContainer = document.getElementById(UI_IDS.COMPARISON_CONTAINER);
   if (!comparisonContainer) return;
   
   // Format differences - always show as positive values (absolute)
@@ -252,6 +282,11 @@ function displayComparison(
   const timeElement = document.getElementById('comparison-time');
   const mapillaryDistanceElement = document.getElementById('comparison-mapillary-distance');
   
+  if (!distanceElement || !timeElement || !mapillaryDistanceElement) {
+    console.warn('Comparison elements not found');
+    return;
+  }
+  
   if (distanceElement) {
     const textSpan = distanceElement.querySelector('.comparison-text');
     if (textSpan) {
@@ -277,8 +312,17 @@ function displayComparison(
   comparisonContainer.style.display = 'block';
 }
 
-// Validate coordinates before route calculation
+/**
+ * Validate coordinates before route calculation
+ * @param {Array|Object} coord - Coordinate as [lng, lat] or {lng, lat}
+ * @param {string} name - Name of the coordinate (for error messages)
+ * @throws {Error} If coordinates are invalid
+ */
 function validateCoordinates(coord, name) {
+  if (!coord) {
+    throw new Error(`${name}: Koordinaten fehlen`);
+  }
+  
   let lng, lat;
   
   // Support both array format [lng, lat] and object format {lng, lat, svgId}
@@ -294,14 +338,16 @@ function validateCoordinates(coord, name) {
     throw new Error(`${name}: Koordinaten müssen ein Array [lng, lat] oder Objekt {lng, lat} sein`);
   }
   
-  if (typeof lng !== 'number' || typeof lat !== 'number') {
-    throw new Error(`${name}: Länge und Breite müssen Zahlen sein`);
+  if (typeof lng !== 'number' || typeof lat !== 'number' || isNaN(lng) || isNaN(lat)) {
+    throw new Error(`${name}: Länge und Breite müssen gültige Zahlen sein`);
   }
-  if (lng < -180 || lng > 180) {
-    throw new Error(`${name}: Länge muss zwischen -180 und 180 liegen`);
+  
+  if (lng < COORDINATE_LIMITS.MIN_LNG || lng > COORDINATE_LIMITS.MAX_LNG) {
+    throw new Error(`${name}: Länge muss zwischen ${COORDINATE_LIMITS.MIN_LNG} und ${COORDINATE_LIMITS.MAX_LNG} liegen`);
   }
-  if (lat < -90 || lat > 90) {
-    throw new Error(`${name}: Breite muss zwischen -90 und 90 liegen`);
+  
+  if (lat < COORDINATE_LIMITS.MIN_LAT || lat > COORDINATE_LIMITS.MAX_LAT) {
+    throw new Error(`${name}: Breite muss zwischen ${COORDINATE_LIMITS.MIN_LAT} und ${COORDINATE_LIMITS.MAX_LAT} liegen`);
   }
 }
 
@@ -339,7 +385,7 @@ async function fetchRouteGet(url) {
     response = await fetch(urlNoDetails);
     return response;
   } catch (error) {
-    throw new Error(`Network error: ${error.message}. Make sure GraphHopper is running on ${GRAPHHOPPER_URL}`);
+    throw new Error(`${ERROR_MESSAGES.NETWORK_ERROR}. Stelle sicher, dass GraphHopper auf ${GRAPHHOPPER_URL} läuft: ${error.message}`);
   }
 }
 
@@ -450,105 +496,13 @@ function extractEncodedValues(path, coordinates) {
   return encodedValues;
 }
 
-// Format time display
-function formatNumberWithThousandSeparator(num) {
-  // Use thin space (U+2009) as thousand separator
-  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '\u2009');
-}
-
-function formatTime(timeSeconds) {
-  const timeMinutes = Math.round(timeSeconds / 60);
-  const timeHours = Math.floor(timeMinutes / 60);
-  const timeMins = timeMinutes % 60;
-  
-  if (timeHours > 0) {
-    return `${timeHours}h ${timeMins}min`;
-  }
-  return `${timeMinutes} min`;
-}
-
-// Generate route info HTML
-function generateRouteInfoHTML(path) {
-  const distance = (path.distance / 1000).toFixed(2);
-  const timeSeconds = Math.round(path.time / 1000);
-  const timeDisplay = formatTime(timeSeconds);
-  
-  const avgSpeed = timeSeconds > 0 
-    ? (path.distance / 1000 / (path.time / 1000 / 3600)).toFixed(1)
-    : '0.0';
-  
-  const ascend = path.ascend ? Math.round(path.ascend) : null;
-  const descend = path.descend ? Math.round(path.descend) : null;
-  const instructionCount = path.instructions ? path.instructions.length : null;
-  const weight = path.weight ? formatNumberWithThousandSeparator(Math.round(path.weight)) : null;
-  
-  return `
-    <div class="route-info-compact">
-      <div class="route-info-row">
-        <svg width="16" height="16" viewBox="0 0 179 179" fill="currentColor">
-          <polygon points="52.258,67.769 52.264,37.224 0,89.506 52.264,141.782 52.258,111.237 126.736,111.249 126.736,141.782 179.006,89.506 126.736,37.224 126.736,67.769"/>
-        </svg>
-        <span class="route-info-compact-value">${distance} km</span>
-      </div>
-      <div class="route-info-row">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <polyline points="12 6 12 12 16 14"></polyline>
-        </svg>
-        <span class="route-info-compact-value">${timeDisplay}</span>
-      </div>
-      <div class="route-info-row">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12,2A10,10,0,1,0,22,12,10.011,10.011,0,0,0,12,2Zm7.411,13H12.659L9.919,8.606a1,1,0,1,0-1.838.788L10.484,15H4.589a8,8,0,1,1,14.822,0Z"/>
-        </svg>
-        <span class="route-info-compact-label">Ø:</span>
-        <span class="route-info-compact-value">${avgSpeed} km/h</span>
-      </div>
-      ${(ascend !== null || descend !== null) ? `
-      <div class="route-info-row">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M13 14L17 9L22 18H2.84444C2.46441 18 2.2233 17.5928 2.40603 17.2596L10.0509 3.31896C10.2429 2.96885 10.7476 2.97394 10.9325 3.32786L15.122 11.3476"/>
-        </svg>
-        <span class="route-info-compact-value">
-          ${ascend !== null ? `↑ ${ascend} m` : ''}
-          ${ascend !== null && descend !== null ? ' ' : ''}
-          ${descend !== null ? `↓ ${descend} m` : ''}
-        </span>
-      </div>
-      ` : ''}
-      ${instructionCount !== null ? `
-      <div class="route-info-row">
-        <svg width="16" height="16" viewBox="0 0 403.262 460.531" fill="currentColor">
-          <path d="M403.262,254.156v206.375h-70.628V254.156c0-32.26-8.411-56.187-25.718-73.16c-24.636-24.166-60.904-27.919-71.934-28.469 h-50.747l29.09,73.648c0.979,2.468,0.187,5.284-1.927,6.88c-2.116,1.604-5.048,1.593-7.152-0.03L59.574,121.797 c-1.445-1.126-2.305-2.84-2.305-4.678c0-1.835,0.86-3.561,2.305-4.672L204.246,1.218c1.064-0.819,2.323-1.218,3.6-1.218 c1.247,0,2.494,0.387,3.552,1.185c2.119,1.593,2.905,4.413,1.927,6.889l-29.09,73.642l37.442,0.109c0,0,3.588,0.198,8.565,0.624 l-0.018-0.63c3.174-0.067,75.568-0.859,126.153,48.761C387.492,161.092,403.262,202.665,403.262,254.156z"/>
-        </svg>
-        <span class="route-info-compact-label">turns:</span>
-        <span class="route-info-compact-value">${instructionCount}</span>
-      </div>
-      ` : ''}
-      ${weight !== null ? `
-      <div class="route-info-row">
-        <svg width="16" height="16" viewBox="0 0 512.001 512.001" fill="currentColor">
-          <path d="M345.589,236.508h-89.589h-89.59c-10.763,0-19.488,8.726-19.488,19.488s8.726,19.488,19.488,19.488h89.59h89.589c10.763,0,19.488-8.726,19.488-19.488S356.352,236.508,345.589,236.508z"/>
-          <path d="M345.589,236.508h-89.589v38.977h89.589c10.763,0,19.488-8.726,19.488-19.488S356.352,236.508,345.589,236.508z"/>
-          <path d="M82.567,348.538H12.992C5.817,348.538,0,342.721,0,335.545v-159.09c0-7.176,5.817-12.992,12.992-12.992h69.575V348.538z"/>
-          <path d="M429.434,163.464h69.575c7.176,0,12.992,5.817,12.992,12.992v159.09c0,7.176-5.817,12.992-12.992,12.992h-69.575V163.464z"/>
-          <path d="M153.419,382.424H82.567c-7.176,0-12.992-5.817-12.992-12.992V142.569c0-7.176,5.817-12.992,12.992-12.992h70.852c7.176,0,12.992,5.817,12.992,12.992v226.863C166.411,376.608,160.594,382.424,153.419,382.424z"/>
-          <path d="M358.582,129.577h70.852c7.176,0,12.992,5.817,12.992,12.992v226.863c0,7.176-5.817,12.992-12.992,12.992h-70.852c-7.176,0-12.992-5.817-12.992-12.992V142.569C345.589,135.394,351.406,129.577,358.582,129.577z"/>
-        </svg>
-        <span class="route-info-compact-label">Weight:</span>
-        <span class="route-info-compact-value">${weight}</span>
-      </div>
-      ` : ''}
-    </div>
-  `;
-}
 
 export function setupRouting(map) {
   routeState.init(map);
   
   // Create source for route line
-  if (!map.getSource('route')) {
-    map.addSource('route', {
+  if (!map.getSource(LAYER_IDS.ROUTE)) {
+    map.addSource(LAYER_IDS.ROUTE, {
       type: 'geojson',
       data: {
         type: 'FeatureCollection',
@@ -558,8 +512,8 @@ export function setupRouting(map) {
   }
 
   // Create source for heightgraph hover point (point on route line)
-  if (!map.getSource('heightgraph-hover-point')) {
-    map.addSource('heightgraph-hover-point', {
+  if (!map.getSource(LAYER_IDS.HEIGHTGRAPH_HOVER_POINT)) {
+    map.addSource(LAYER_IDS.HEIGHTGRAPH_HOVER_POINT, {
       type: 'geojson',
       data: {
         type: 'FeatureCollection',
@@ -569,8 +523,8 @@ export function setupRouting(map) {
   }
 
   // Create source for route hover segment (highlighted segment on hover)
-  if (!map.getSource('route-hover-segment')) {
-    map.addSource('route-hover-segment', {
+  if (!map.getSource(LAYER_IDS.ROUTE_HOVER_SEGMENT)) {
+    map.addSource(LAYER_IDS.ROUTE_HOVER_SEGMENT, {
       type: 'geojson',
       data: {
         type: 'FeatureCollection',
@@ -580,11 +534,11 @@ export function setupRouting(map) {
   }
   
   // Create layer for route line (on top of mapillary_coverage layer)
-  if (!map.getLayer('route-layer')) {
+  if (!map.getLayer(LAYER_IDS.ROUTE_LAYER)) {
     map.addLayer({
-      id: 'route-layer',
+      id: LAYER_IDS.ROUTE_LAYER,
       type: 'line',
-      source: 'route',
+      source: LAYER_IDS.ROUTE,
       layout: {
         'line-join': 'round',
         'line-cap': 'round'
@@ -598,11 +552,11 @@ export function setupRouting(map) {
   }
   
   // Create layer for route hover segment (highlighted segment on hover)
-  if (!map.getLayer('route-hover-segment-layer')) {
+  if (!map.getLayer(LAYER_IDS.ROUTE_HOVER_SEGMENT_LAYER)) {
     map.addLayer({
-      id: 'route-hover-segment-layer',
+      id: LAYER_IDS.ROUTE_HOVER_SEGMENT_LAYER,
       type: 'line',
-      source: 'route-hover-segment',
+      source: LAYER_IDS.ROUTE_HOVER_SEGMENT,
       layout: {
         'line-join': 'round',
         'line-cap': 'round'
@@ -616,11 +570,11 @@ export function setupRouting(map) {
   }
 
   // Create layer for heightgraph hover point (point on route line)
-  if (!map.getLayer('heightgraph-hover-point-layer')) {
+  if (!map.getLayer(LAYER_IDS.HEIGHTGRAPH_HOVER_POINT_LAYER)) {
     map.addLayer({
-      id: 'heightgraph-hover-point-layer',
+      id: LAYER_IDS.HEIGHTGRAPH_HOVER_POINT_LAYER,
       type: 'circle',
-      source: 'heightgraph-hover-point',
+      source: LAYER_IDS.HEIGHTGRAPH_HOVER_POINT,
       paint: {
         'circle-radius': 8,
         'circle-color': '#ef4444',
@@ -654,9 +608,14 @@ export function setupRouting(map) {
 }
 
 export async function calculateRoute(map, start, end, waypoints = []) {
+  if (!map) {
+    console.error('calculateRoute: map instance is required');
+    return;
+  }
+  
   // Prevent parallel route calculations
   if (routeCalculationInProgress) {
-    console.warn('Route-Berechnung bereits in Arbeit, ignoriere neue Anfrage');
+    console.warn(ERROR_MESSAGES.ROUTE_CALCULATION_IN_PROGRESS);
     return;
   }
   
@@ -716,8 +675,8 @@ export async function calculateRoute(map, start, end, waypoints = []) {
   const allPoints = [start, ...waypointCoords, end];
   
   routeCalculationInProgress = true;
-  const calculateBtn = document.getElementById('calculate-route');
-  const routeInfo = document.getElementById('route-info');
+  const calculateBtn = document.getElementById(UI_IDS.CALCULATE_BTN);
+  const routeInfo = document.getElementById(UI_IDS.ROUTE_INFO);
   
   if (calculateBtn) {
     calculateBtn.disabled = true;
@@ -746,11 +705,12 @@ export async function calculateRoute(map, start, end, waypoints = []) {
       );
       
       // Debug: Log the custom model being sent
-      console.log('🔍 Custom Model Debug:', {
-        profile: routeState.selectedProfile,
-        customModel: routeState.customModel,
-        requestBody: requestBody
-      });
+      // Note: Remove or comment out in production if needed
+      // console.log('🔍 Custom Model Debug:', {
+      //   profile: routeState.selectedProfile,
+      //   customModel: routeState.customModel,
+      //   requestBody: requestBody
+      // });
       
       try {
         response = await fetch(`${GRAPHHOPPER_URL}/route`, {
@@ -759,7 +719,7 @@ export async function calculateRoute(map, start, end, waypoints = []) {
           body: JSON.stringify(requestBody)
         });
       } catch (error) {
-        throw new Error(`Network error: ${error.message}. Make sure GraphHopper is running on ${GRAPHHOPPER_URL}`);
+        throw new Error(`${ERROR_MESSAGES.NETWORK_ERROR}. Stelle sicher, dass GraphHopper auf ${GRAPHHOPPER_URL} läuft: ${error.message}`);
       }
     } else {
       // GET request with URL parameters
@@ -940,7 +900,11 @@ export async function calculateRoute(map, start, end, waypoints = []) {
       
       // Update route layer - will be colored by updateRouteColor based on selected encoded value
       // Initially set as single feature, will be updated by updateRouteColor
-      map.getSource('route').setData({
+      const routeSource = map.getSource(LAYER_IDS.ROUTE);
+      if (!routeSource) {
+        throw new Error('Route source not found');
+      }
+      routeSource.setData({
         type: 'Feature',
         geometry: {
           type: 'LineString',
@@ -952,102 +916,16 @@ export async function calculateRoute(map, start, end, waypoints = []) {
       });
       
       // Update layer to support property-based coloring
-      map.setPaintProperty('route-layer', 'line-color', ['get', 'color']);
+      map.setPaintProperty(LAYER_IDS.ROUTE_LAYER, 'line-color', ['get', 'color']);
       
-      // Update route color based on selected encoded value
-      const select = document.getElementById('heightgraph-encoded-select');
-      const selectedType = select ? select.value : 'mapillary_coverage';
-      updateRouteColor(selectedType, encodedValues);
+        // Update route color based on selected encoded value
+        const select = document.getElementById(UI_IDS.ENCODED_SELECT);
+        const selectedType = select ? select.value : 'mapillary_coverage';
+        updateRouteColor(selectedType, encodedValues);
       
       // Update route info
       if (routeInfo) {
-        const distance = (path.distance / 1000).toFixed(2);
-        const timeSeconds = Math.round(path.time / 1000);
-        const timeMinutes = Math.round(timeSeconds / 60);
-        const timeHours = Math.floor(timeMinutes / 60);
-        const timeMins = timeMinutes % 60;
-        
-        // Format time nicely
-        let timeDisplay = '';
-        if (timeHours > 0) {
-          timeDisplay = `${timeHours}h ${timeMins}min`;
-        } else {
-          timeDisplay = `${timeMinutes} min`;
-        }
-        
-        // Calculate average speed (km/h)
-        const avgSpeed = timeHours > 0 
-          ? (path.distance / 1000 / (path.time / 1000 / 3600)).toFixed(1)
-          : (path.distance / 1000 / (path.time / 1000 / 60) * 60).toFixed(1);
-        
-        // Get elevation data if available
-        const ascend = path.ascend ? Math.round(path.ascend) : null;
-        const descend = path.descend ? Math.round(path.descend) : null;
-        
-        // Get instruction count if available
-        const instructionCount = path.instructions ? path.instructions.length : null;
-        
-        // Additional GraphHopper data
-        const weight = path.weight ? formatNumberWithThousandSeparator(Math.round(path.weight)) : null;
-        
-        routeInfo.innerHTML = `
-          <div class="route-info-compact">
-            <div class="route-info-row">
-              <svg width="16" height="16" viewBox="0 0 179 179" fill="currentColor">
-                <polygon points="52.258,67.769 52.264,37.224 0,89.506 52.264,141.782 52.258,111.237 126.736,111.249 126.736,141.782 179.006,89.506 126.736,37.224 126.736,67.769"/>
-              </svg>
-              <span class="route-info-compact-value">${distance} km</span>
-            </div>
-            <div class="route-info-row">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-              </svg>
-              <span class="route-info-compact-value">${timeDisplay}</span>
-            </div>
-            <div class="route-info-row">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12,2A10,10,0,1,0,22,12,10.011,10.011,0,0,0,12,2Zm7.411,13H12.659L9.919,8.606a1,1,0,1,0-1.838.788L10.484,15H4.589a8,8,0,1,1,14.822,0Z"/>
-              </svg>
-              <span class="route-info-compact-value">${avgSpeed} km/h</span>
-            </div>
-            ${(ascend !== null || descend !== null) ? `
-            <div class="route-info-row">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M13 14L17 9L22 18H2.84444C2.46441 18 2.2233 17.5928 2.40603 17.2596L10.0509 3.31896C10.2429 2.96885 10.7476 2.97394 10.9325 3.32786L15.122 11.3476"/>
-              </svg>
-              <span class="route-info-compact-value">
-                ${ascend !== null ? `↑ ${ascend} m` : ''}
-                ${ascend !== null && descend !== null ? ' ' : ''}
-                ${descend !== null ? `↓ ${descend} m` : ''}
-              </span>
-            </div>
-            ` : ''}
-            ${instructionCount !== null ? `
-            <div class="route-info-row">
-              <svg width="16" height="16" viewBox="0 0 403.262 460.531" fill="currentColor">
-                <path d="M403.262,254.156v206.375h-70.628V254.156c0-32.26-8.411-56.187-25.718-73.16c-24.636-24.166-60.904-27.919-71.934-28.469 h-50.747l29.09,73.648c0.979,2.468,0.187,5.284-1.927,6.88c-2.116,1.604-5.048,1.593-7.152-0.03L59.574,121.797 c-1.445-1.126-2.305-2.84-2.305-4.678c0-1.835,0.86-3.561,2.305-4.672L204.246,1.218c1.064-0.819,2.323-1.218,3.6-1.218 c1.247,0,2.494,0.387,3.552,1.185c2.119,1.593,2.905,4.413,1.927,6.889l-29.09,73.642l37.442,0.109c0,0,3.588,0.198,8.565,0.624 l-0.018-0.63c3.174-0.067,75.568-0.859,126.153,48.761C387.492,161.092,403.262,202.665,403.262,254.156z"/>
-              </svg>
-              <span class="route-info-compact-label">turns:</span>
-              <span class="route-info-compact-value">${instructionCount}</span>
-            </div>
-            ` : ''}
-            ${weight !== null ? `
-            <div class="route-info-row">
-              <svg width="16" height="16" viewBox="0 0 512.001 512.001" fill="currentColor">
-                <path d="M345.589,236.508h-89.589h-89.59c-10.763,0-19.488,8.726-19.488,19.488s8.726,19.488,19.488,19.488h89.59h89.589c10.763,0,19.488-8.726,19.488-19.488S356.352,236.508,345.589,236.508z"/>
-                <path d="M345.589,236.508h-89.589v38.977h89.589c10.763,0,19.488-8.726,19.488-19.488S356.352,236.508,345.589,236.508z"/>
-                <path d="M82.567,348.538H12.992C5.817,348.538,0,342.721,0,335.545v-159.09c0-7.176,5.817-12.992,12.992-12.992h69.575V348.538z"/>
-                <path d="M429.434,163.464h69.575c7.176,0,12.992,5.817,12.992,12.992v159.09c0,7.176-5.817,12.992-12.992,12.992h-69.575V163.464z"/>
-                <path d="M153.419,382.424H82.567c-7.176,0-12.992-5.817-12.992-12.992V142.569c0-7.176,5.817-12.992,12.992-12.992h70.852c7.176,0,12.992,5.817,12.992,12.992v226.863C166.411,376.608,160.594,382.424,153.419,382.424z"/>
-                <path d="M358.582,129.577h70.852c7.176,0,12.992,5.817,12.992,12.992v226.863c0,7.176-5.817,12.992-12.992,12.992h-70.852c-7.176,0-12.992-5.817-12.992-12.992V142.569C345.589,135.394,351.406,129.577,358.582,129.577z"/>
-              </svg>
-              <span class="route-info-compact-label">weight:</span>
-              <span class="route-info-compact-value">${weight}</span>
-            </div>
-            ` : ''}
-          </div>
-        `;
+        routeInfo.innerHTML = generateRouteInfoHTML(path);
         
         // Store route data for redrawing heightgraph and route visualization
         routeState.currentRouteData = {
@@ -1061,7 +939,7 @@ export async function calculateRoute(map, start, end, waypoints = []) {
         updateContextLayersOpacity(map, true);
         
         // Show GPX export button
-        const exportGpxBtn = document.getElementById('export-gpx');
+        const exportGpxBtn = document.getElementById(UI_IDS.EXPORT_GPX_BTN);
         if (exportGpxBtn) {
           exportGpxBtn.style.display = 'flex';
         }
@@ -1076,7 +954,7 @@ export async function calculateRoute(map, start, end, waypoints = []) {
             drawHeightgraph([], path.distance, encodedValues, coordinates);
           } else {
             // Hide heightgraph if no data
-            const heightgraphContainer = document.getElementById('heightgraph-container');
+            const heightgraphContainer = document.getElementById(UI_IDS.HEIGHTGRAPH_CONTAINER);
             if (heightgraphContainer) {
               heightgraphContainer.style.display = 'none';
             }
@@ -1084,7 +962,7 @@ export async function calculateRoute(map, start, end, waypoints = []) {
         };
         
         // Show container and trigger panel positioning
-        const heightgraphContainer = document.getElementById('heightgraph-container');
+        const heightgraphContainer = document.getElementById(UI_IDS.HEIGHTGRAPH_CONTAINER);
         if (heightgraphContainer) {
           heightgraphContainer.style.display = 'block';
           
@@ -1116,7 +994,7 @@ export async function calculateRoute(map, start, end, waypoints = []) {
             calculateComparisonWithWeightOne(map, allPoints, path, encodedValues, coordinates, currentWeight);
           } else {
             // Hide comparison if weight >= 1
-            const comparisonContainer = document.getElementById('mapillary-weight-comparison');
+            const comparisonContainer = document.getElementById(UI_IDS.COMPARISON_CONTAINER);
             if (comparisonContainer) {
               comparisonContainer.style.display = 'none';
             }
@@ -1172,20 +1050,13 @@ export async function calculateRoute(map, start, end, waypoints = []) {
       
       map.fitBounds(bounds, { padding });
     } else {
-      throw new Error('Keine Route gefunden');
+      throw new Error(ERROR_MESSAGES.NO_ROUTE_FOUND);
     }
   } catch (error) {
     console.error('Routing error:', error);
     
-    // Check if it's an out-of-bounds error
-    let userFriendlyMessage = error.message;
-    if (error.message === 'OUT_OF_BOUNDS' || error.message.includes('PointNotFoundException') || error.message.includes('Cannot find point')) {
-      userFriendlyMessage = 'Aktuell stehen nur Berlin und Brandenburg zur Verfügung.';
-    }
-    
-    if (routeInfo) {
-      routeInfo.innerHTML = `<div style="color: #dc2626; padding: 8px; background: #fee2e2; border-radius: 4px; font-size: 13px;">${userFriendlyMessage}</div>`;
-    }
+    const userFriendlyMessage = getUserFriendlyErrorMessage(error);
+    displayRouteError(userFriendlyMessage, routeInfo);
     
     // Show alert with user-friendly message
     alert(`Fehler beim Berechnen der Route: ${userFriendlyMessage}`);
@@ -1203,23 +1074,29 @@ export function clearRoute(map) {
   cleanupHeightgraphHandlers();
   
   routeState.reset();
-  map.getCanvas().style.cursor = '';
+  if (map && map.getCanvas()) {
+    map.getCanvas().style.cursor = '';
+  }
   
-  map.getSource('route').setData({
-    type: 'FeatureCollection',
-    features: []
-  });
+  const routeSource = map.getSource(LAYER_IDS.ROUTE);
+  if (routeSource) {
+    routeSource.setData({
+      type: 'FeatureCollection',
+      features: []
+    });
+  }
   
   // Clear heightgraph hover point
-  if (map.getSource('heightgraph-hover-point')) {
-    map.getSource('heightgraph-hover-point').setData({
+  const hoverPointSource = map.getSource(LAYER_IDS.HEIGHTGRAPH_HOVER_POINT);
+  if (hoverPointSource) {
+    hoverPointSource.setData({
       type: 'FeatureCollection',
       features: []
     });
   }
   
   // Hide comparison
-  const comparisonContainer = document.getElementById('mapillary-weight-comparison');
+  const comparisonContainer = document.getElementById(UI_IDS.COMPARISON_CONTAINER);
   if (comparisonContainer) {
     comparisonContainer.style.display = 'none';
   }
@@ -1229,26 +1106,26 @@ export function clearRoute(map) {
     btn.classList.remove('active');
   });
   
-  const startInput = document.getElementById('start-input');
-  const endInput = document.getElementById('end-input');
+  const startInput = document.getElementById(UI_IDS.START_INPUT);
+  const endInput = document.getElementById(UI_IDS.END_INPUT);
   if (startInput) startInput.value = '';
   if (endInput) endInput.value = '';
   
   // Hide heightgraph
-  const heightgraphContainer = document.getElementById('heightgraph-container');
+  const heightgraphContainer = document.getElementById(UI_IDS.HEIGHTGRAPH_CONTAINER);
   if (heightgraphContainer) {
     heightgraphContainer.style.display = 'none';
   }
   
   // Hide GPX export button
-  const exportGpxBtn = document.getElementById('export-gpx');
+  const exportGpxBtn = document.getElementById(UI_IDS.EXPORT_GPX_BTN);
   if (exportGpxBtn) {
     exportGpxBtn.style.display = 'none';
   }
   
   // Reset route color
-  if (map) {
-    map.setPaintProperty('route-layer', 'line-color', '#3b82f6');
+  if (map && map.getLayer(LAYER_IDS.ROUTE_LAYER)) {
+    map.setPaintProperty(LAYER_IDS.ROUTE_LAYER, 'line-color', '#3b82f6');
   }
   
   // Clear waypoints list in UI immediately
@@ -1276,26 +1153,8 @@ export function clearRoute(map) {
 export function updateContextLayersOpacity(map, hasRoute) {
   if (!map) return;
   
-  // Define all context layer IDs
-  const contextLayerIds = [
-    // Bike lanes layers
-    'bike-lanes-needsClarification',
-    'bike-lanes-gehweg',
-    'bike-lanes-kfz',
-    'bike-lanes-fussverkehr',
-    'bike-lanes-eigenstaendig',
-    'bike-lanes-baulich',
-    // Missing streets layers
-    'missing-streets-missing-pathclasses',
-    'missing-streets-missing-roads',
-    'missing-streets-missing-bikelanes',
-    'missing-streets-regular-pathclasses',
-    'missing-streets-regular-roads',
-    'missing-streets-regular-bikelanes',
-    'missing-streets-pano-pathclasses',
-    'missing-streets-pano-roads',
-    'missing-streets-pano-bikelanes'
-  ];
+  // Use context layer IDs from constants
+  const contextLayerIds = CONTEXT_LAYER_IDS;
   
   // Default opacity values (from layer definitions)
   const defaultOpacity = {

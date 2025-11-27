@@ -26,7 +26,8 @@ export function addBasicSources(map, maptilerApiKey) {
     type: "raster-dem",
     url: "https://tiles.mapterhorn.com/tilejson.json",
     tileSize: 512,
-    encoding: "terrarium"
+    encoding: "terrarium",
+    attribution: "© Mapterhorn - https://mapterhorn.com"
   });
   
   // Raster-DEM: Hillshade (Mapterhorn)
@@ -34,7 +35,8 @@ export function addBasicSources(map, maptilerApiKey) {
     type: "raster-dem",
     url: "https://tiles.mapterhorn.com/tilejson.json",
     tileSize: 512,
-    encoding: "terrarium"
+    encoding: "terrarium",
+    attribution: "© Mapterhorn - https://mapterhorn.com"
   });
 
   // Bike lanes source
