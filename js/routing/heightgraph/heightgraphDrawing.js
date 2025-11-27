@@ -16,7 +16,7 @@ export function drawBackground(ctx, padding, graphWidth, graphHeight) {
  */
 export function drawGrid(ctx, padding, graphWidth, graphHeight, baseData) {
   ctx.strokeStyle = HEIGHTGRAPH_CONFIG.colors.grid;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = HEIGHTGRAPH_CONFIG.lineWidth.grid;
   
   const yLabels = new Set();
   
@@ -28,19 +28,20 @@ export function drawGrid(ctx, padding, graphWidth, graphHeight, baseData) {
   if (baseData.length > 0) {
     const baseValid = baseData.filter(v => v !== null && v !== undefined);
     if (baseValid.length > 0) {
-      elevationMin = Math.min(...baseValid) - 10;
-      elevationMax = Math.max(...baseValid) + 10;
+      const elevationPadding = HEIGHTGRAPH_CONFIG.elevationPadding;
+      elevationMin = Math.min(...baseValid) - elevationPadding;
+      elevationMax = Math.max(...baseValid) + elevationPadding;
       elevationRange = elevationMax - elevationMin || 1;
     }
   }
   
-  // Calculate ticks with step sizes: 5, 10, 20, 50, 100
-  // Maximum 8 ticks to avoid overcrowding
+  // Calculate ticks with step sizes from config
   const calculateNiceTicks = (min, max) => {
     const range = max - min;
-    const stepSizes = [5, 10, 20, 50, 100];
+    const stepSizes = HEIGHTGRAPH_CONFIG.yAxis.stepSizes;
+    const maxTicks = HEIGHTGRAPH_CONFIG.yAxis.maxTicks;
     
-    // Find the smallest step size that results in 8 or fewer ticks
+    // Find the smallest step size that results in maxTicks or fewer ticks
     let step = stepSizes[stepSizes.length - 1]; // Default to largest step
     
     for (const candidateStep of stepSizes) {
@@ -48,7 +49,7 @@ export function drawGrid(ctx, padding, graphWidth, graphHeight, baseData) {
       const tickMax = Math.ceil(max / candidateStep) * candidateStep;
       const numTicks = Math.floor((tickMax - tickMin) / candidateStep) + 1;
       
-      if (numTicks <= 8) {
+      if (numTicks <= maxTicks) {
         step = candidateStep;
         break;
       }
@@ -72,8 +73,8 @@ export function drawGrid(ctx, padding, graphWidth, graphHeight, baseData) {
   ctx.font = `${HEIGHTGRAPH_CONFIG.font.size} ${HEIGHTGRAPH_CONFIG.font.family}`;
   ctx.textAlign = 'right';
   
-  // Position labels with enough space (5px margin from left edge of graph)
-  const labelX = padding.left - 5;
+  // Position labels with margin from left edge of graph
+  const labelX = padding.left - HEIGHTGRAPH_CONFIG.labels.yAxisMargin;
   
   ticks.forEach((elevationValue) => {
     const y = padding.top + graphHeight - ((elevationValue - elevationMin) / elevationRange) * graphHeight;
@@ -88,7 +89,7 @@ export function drawGrid(ctx, padding, graphWidth, graphHeight, baseData) {
       
       if (!yLabels.has(labelText)) {
         yLabels.add(labelText);
-        ctx.fillText(labelText, labelX, y + 3);
+        ctx.fillText(labelText, labelX, y + HEIGHTGRAPH_CONFIG.labels.yAxisOffset);
       }
     }
   });
@@ -101,7 +102,7 @@ export function drawElevationLine(ctx, points) {
   if (points.length === 0) return;
   
   ctx.strokeStyle = HEIGHTGRAPH_CONFIG.colors.elevationLine;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = HEIGHTGRAPH_CONFIG.lineWidth.elevation;
   ctx.beginPath();
   
   points.forEach((point, index) => {
@@ -124,22 +125,74 @@ export function drawXAxisLabels(ctx, padding, graphWidth, graphHeight, actualTot
   ctx.textAlign = 'center';
   
   const totalDistanceKm = actualTotalDistance / 1000;
-  const maxTicks = 8;
+  const xAxisConfig = HEIGHTGRAPH_CONFIG.xAxis;
   
-  const possibleStepSizes = [0.5, 1, 2, 5, 10, 20, 50, 100];
+  // If values are 3-digit (>= threshold), use maxTicksLong to avoid overcrowding
+  // Otherwise use maxTicksShort
+  const maxTicks = totalDistanceKm >= xAxisConfig.threshold3Digit 
+    ? xAxisConfig.maxTicksLong 
+    : xAxisConfig.maxTicksShort;
+  
+  const possibleStepSizes = xAxisConfig.stepSizes;
   let stepSize = possibleStepSizes[possibleStepSizes.length - 1];
   let useHalfSteps = false;
   
-  for (const candidateStepSize of possibleStepSizes) {
-    const numTicks = Math.ceil(totalDistanceKm / candidateStepSize);
-    if (numTicks <= maxTicks || candidateStepSize === possibleStepSizes[possibleStepSizes.length - 1]) {
-      stepSize = candidateStepSize;
-      useHalfSteps = (candidateStepSize === 0.5);
-      break;
+  // For 3-digit distances, try to calculate an optimal step size to get close to maxTicks
+  if (totalDistanceKm >= xAxisConfig.threshold3Digit) {
+    // Calculate ideal step size for maxTicks: (maxTicks - 1) steps from 0 to totalDistanceKm
+    const idealStepSize = totalDistanceKm / (maxTicks - 1);
+    
+    // Round to a "nice" number (multiple of niceMultipliers)
+    const niceMultipliers = xAxisConfig.niceMultipliers;
+    let niceStepSize = idealStepSize;
+    
+    // Find the closest nice multiplier
+    for (const multiplier of niceMultipliers) {
+      const rounded = Math.round(idealStepSize / multiplier) * multiplier;
+      if (rounded >= xAxisConfig.minNiceStepSize && rounded <= totalDistanceKm) {
+        niceStepSize = rounded;
+        break;
+      }
+    }
+    
+    // Check if this gives us a good number of ticks
+    const numTicksWithNice = 1 + Math.ceil(totalDistanceKm / niceStepSize);
+    if (numTicksWithNice <= maxTicks && niceStepSize >= xAxisConfig.minNiceStepSize) {
+      stepSize = niceStepSize;
+    } else {
+      // Fall back to standard logic
+      let bestStepSize = stepSize;
+      let bestNumTicks = 1 + Math.ceil(totalDistanceKm / stepSize);
+      
+      for (const candidateStepSize of possibleStepSizes) {
+        const numTicks = 1 + Math.ceil(totalDistanceKm / candidateStepSize);
+        if (numTicks <= maxTicks) {
+          if (numTicks > bestNumTicks || (numTicks === bestNumTicks && candidateStepSize < bestStepSize)) {
+            bestStepSize = candidateStepSize;
+            bestNumTicks = numTicks;
+          }
+        }
+      }
+      stepSize = bestStepSize;
+    }
+  } else {
+    // For shorter distances, use standard logic
+    for (const candidateStepSize of possibleStepSizes) {
+      const numTicks = 1 + Math.ceil(totalDistanceKm / candidateStepSize);
+      if (numTicks <= maxTicks || candidateStepSize === possibleStepSizes[possibleStepSizes.length - 1]) {
+        stepSize = candidateStepSize;
+        useHalfSteps = (candidateStepSize === 0.5);
+        break;
+      }
     }
   }
   
+  useHalfSteps = (stepSize === 0.5);
+  
   const ticks = [];
+  // Always include 0 km
+  ticks.push(0);
+  
   if (useHalfSteps) {
     for (let distance = stepSize; distance <= totalDistanceKm; distance += stepSize) {
       ticks.push(Math.round(distance * 10) / 10);
@@ -156,8 +209,8 @@ export function drawXAxisLabels(ctx, padding, graphWidth, graphHeight, actualTot
     
     if (x >= padding.left && x <= padding.left + graphWidth) {
       const labelText = (distance % 1 === 0 ? distance.toFixed(0) : distance.toFixed(1)) + ' km';
-      // Position labels closer to the graph (just below the graph area)
-      const labelY = padding.top + graphHeight + 12;
+      // Position labels below the graph area
+      const labelY = padding.top + graphHeight + HEIGHTGRAPH_CONFIG.labels.xAxisOffset;
       ctx.fillText(labelText, x, labelY);
     }
   }
@@ -223,26 +276,26 @@ export function fillSegmentsByValue(ctx, points, values, getColor, padding, grap
 // ============================================================================
 
 export function getSurfaceColorForStats(surfaceValue) {
-  return getSurfaceColorRgba(surfaceValue, 0.15);
+  return getSurfaceColorRgba(surfaceValue, HEIGHTGRAPH_CONFIG.opacity.stats);
 }
 
 export function getRoadClassColorForStats(roadClassValue) {
-  return getRoadClassColorRgba(roadClassValue, 0.15);
+  return getRoadClassColorRgba(roadClassValue, HEIGHTGRAPH_CONFIG.opacity.stats);
 }
 
 export function getSurfaceColor(surfaceValue) {
-  return getSurfaceColorRgba(surfaceValue, 0.3);
+  return getSurfaceColorRgba(surfaceValue, HEIGHTGRAPH_CONFIG.opacity.segments);
 }
 
 export function getRoadClassColor(roadClassValue) {
-  return getRoadClassColorRgba(roadClassValue, 0.3);
+  return getRoadClassColorRgba(roadClassValue, HEIGHTGRAPH_CONFIG.opacity.segments);
 }
 
 export function getBicycleInfraColor(bicycleInfraValue) {
-  return getBicycleInfraColorRgba(bicycleInfraValue, 0.3);
+  return getBicycleInfraColorRgba(bicycleInfraValue, HEIGHTGRAPH_CONFIG.opacity.segments);
 }
 
 export function getBicycleInfraColorForStats(bicycleInfraValue) {
-  return getBicycleInfraColorRgba(bicycleInfraValue, 0.15);
+  return getBicycleInfraColorRgba(bicycleInfraValue, HEIGHTGRAPH_CONFIG.opacity.stats);
 }
 
