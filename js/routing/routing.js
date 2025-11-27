@@ -1057,6 +1057,9 @@ export async function calculateRoute(map, start, end, waypoints = []) {
           coordinates: coordinates
         };
         
+        // Update context layers opacity when route is displayed
+        updateContextLayersOpacity(map, true);
+        
         // Show GPX export button
         const exportGpxBtn = document.getElementById('export-gpx');
         if (exportGpxBtn) {
@@ -1259,5 +1262,92 @@ export function clearRoute(map) {
     updateMarkers(map);
     updateWaypointsList(); // This will ensure the list is empty (routeState.waypoints is already cleared)
     updateCoordinateTooltips(); // Clear tooltips
+  });
+  
+  // Restore context layers opacity when route is cleared
+  updateContextLayersOpacity(map, false);
+}
+
+/**
+ * Update opacity of context layers (bike lanes and missing streets) based on route visibility
+ * @param {maplibregl.Map} map - Map instance
+ * @param {boolean} hasRoute - Whether a route is currently displayed
+ */
+export function updateContextLayersOpacity(map, hasRoute) {
+  if (!map) return;
+  
+  // Define all context layer IDs
+  const contextLayerIds = [
+    // Bike lanes layers
+    'bike-lanes-needsClarification',
+    'bike-lanes-gehweg',
+    'bike-lanes-kfz',
+    'bike-lanes-fussverkehr',
+    'bike-lanes-eigenstaendig',
+    'bike-lanes-baulich',
+    // Missing streets layers
+    'missing-streets-missing-pathclasses',
+    'missing-streets-missing-roads',
+    'missing-streets-missing-bikelanes',
+    'missing-streets-regular-pathclasses',
+    'missing-streets-regular-roads',
+    'missing-streets-regular-bikelanes',
+    'missing-streets-pano-pathclasses',
+    'missing-streets-pano-roads',
+    'missing-streets-pano-bikelanes'
+  ];
+  
+  // Default opacity values (from layer definitions)
+  const defaultOpacity = {
+    // Bike lanes don't have explicit opacity, so they default to 1.0
+    'bike-lanes-needsClarification': 1.0,
+    'bike-lanes-gehweg': 1.0,
+    'bike-lanes-kfz': 1.0,
+    'bike-lanes-fussverkehr': 1.0,
+    'bike-lanes-eigenstaendig': 1.0,
+    'bike-lanes-baulich': 1.0,
+    // Missing streets have 0.7 opacity
+    'missing-streets-missing-pathclasses': 0.7,
+    'missing-streets-missing-roads': 0.7,
+    'missing-streets-missing-bikelanes': 0.7,
+    'missing-streets-regular-pathclasses': 0.7,
+    'missing-streets-regular-roads': 0.7,
+    'missing-streets-regular-bikelanes': 0.7,
+    'missing-streets-pano-pathclasses': 0.7,
+    'missing-streets-pano-roads': 0.7,
+    'missing-streets-pano-bikelanes': 0.7
+  };
+  
+  // Opacity when route is displayed (different for bike lanes and missing streets)
+  const routeOpacity = {
+    // Bike lanes: 0.5
+    'bike-lanes-needsClarification': 0.5,
+    'bike-lanes-gehweg': 0.5,
+    'bike-lanes-kfz': 0.5,
+    'bike-lanes-fussverkehr': 0.5,
+    'bike-lanes-eigenstaendig': 0.5,
+    'bike-lanes-baulich': 0.5,
+    // Missing streets: 0.35
+    'missing-streets-missing-pathclasses': 0.35,
+    'missing-streets-missing-roads': 0.35,
+    'missing-streets-missing-bikelanes': 0.35,
+    'missing-streets-regular-pathclasses': 0.35,
+    'missing-streets-regular-roads': 0.35,
+    'missing-streets-regular-bikelanes': 0.35,
+    'missing-streets-pano-pathclasses': 0.35,
+    'missing-streets-pano-roads': 0.35,
+    'missing-streets-pano-bikelanes': 0.35
+  };
+  
+  contextLayerIds.forEach(layerId => {
+    if (!map.getLayer(layerId)) return;
+    
+    // Check if layer is visible
+    const visibility = map.getLayoutProperty(layerId, 'visibility');
+    if (visibility !== 'visible') return;
+    
+    // Set opacity based on route visibility
+    const opacity = hasRoute ? routeOpacity[layerId] : defaultOpacity[layerId];
+    map.setPaintProperty(layerId, 'line-opacity', opacity);
   });
 }

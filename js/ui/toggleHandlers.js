@@ -1,5 +1,18 @@
 // Toggle handlers for various UI elements (Hillshade, Terrain, Bike Lanes, Missing Streets, etc.)
 
+import { routeState } from '../routing/routeState.js';
+
+let updateContextLayersOpacity = null;
+
+// Dynamically import the function to avoid circular dependencies
+async function getUpdateContextLayersOpacity() {
+  if (!updateContextLayersOpacity) {
+    const routingModule = await import('../routing/routing.js');
+    updateContextLayersOpacity = routingModule.updateContextLayersOpacity;
+  }
+  return updateContextLayersOpacity;
+}
+
 export function setupToggleHandlers() {
   // Toggle logic for Hillshade and Terrain
   const toggleHillshade = document.getElementById('toggleHillshade');
@@ -70,6 +83,14 @@ export function setupToggleHandlers() {
           }
         });
 
+        // Update context layers opacity based on route visibility
+        getUpdateContextLayersOpacity().then(updateFn => {
+          if (updateFn && window.map) {
+            const hasRoute = routeState.currentRouteData !== null;
+            updateFn(window.map, hasRoute);
+          }
+        });
+
         // Show/hide legend and content
         if (bikelanesLegend) {
           bikelanesLegend.style.display = e.target.checked ? 'flex' : 'none';
@@ -123,6 +144,14 @@ export function setupToggleHandlers() {
         layers.forEach(layerId => {
           if (window.map.getLayer(layerId)) {
             window.map.setLayoutProperty(layerId, 'visibility', visibility);
+          }
+        });
+
+        // Update context layers opacity based on route visibility
+        getUpdateContextLayersOpacity().then(updateFn => {
+          if (updateFn && window.map) {
+            const hasRoute = routeState.currentRouteData !== null;
+            updateFn(window.map, hasRoute);
           }
         });
 
