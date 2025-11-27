@@ -1,5 +1,43 @@
 // Heightgraph configuration
 
+/**
+ * Get heightgraph colors based on current theme
+ */
+function getHeightgraphColors() {
+  // Check for manual theme override first
+  const themeOverride = document.documentElement.getAttribute('data-theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  
+  let isDark = false;
+  
+  if (themeOverride === 'dark') {
+    isDark = true;
+  } else if (themeOverride === 'light') {
+    isDark = false;
+  } else {
+    // No manual override - use system preference
+    isDark = prefersDark;
+  }
+  
+  if (isDark) {
+    return {
+      background: '#1f2937',  // Dark background
+      grid: '#4b5563',         // Lighter grid lines for visibility
+      text: '#d1d5db',          // Light text
+      elevationLine: '#60a5fa', // Lighter blue for dark mode
+      indicatorLine: '#f87171'  // Lighter red for dark mode
+    };
+  } else {
+    return {
+      background: '#f9fafb',
+      grid: '#e5e7eb',
+      text: '#6b7280',
+      elevationLine: '#3b82f6',
+      indicatorLine: '#ef4444'
+    };
+  }
+}
+
 export const HEIGHTGRAPH_CONFIG = {
   canvas: {
     defaultWidth: 320,
@@ -15,12 +53,8 @@ export const HEIGHTGRAPH_CONFIG = {
   grid: {
     steps: 5
   },
-  colors: {
-    background: '#f9fafb',
-    grid: '#e5e7eb',
-    text: '#6b7280',
-    elevationLine: '#3b82f6',
-    indicatorLine: '#ef4444'
+  get colors() {
+    return getHeightgraphColors();
   },
   debounce: {
     resize: 150

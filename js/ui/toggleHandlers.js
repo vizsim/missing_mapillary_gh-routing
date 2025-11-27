@@ -13,7 +13,114 @@ async function getUpdateContextLayersOpacity() {
   return updateContextLayersOpacity;
 }
 
+// Initialize dark mode early (before DOMContentLoaded)
+function initDarkMode() {
+  // Check for manual override first
+  const themeOverride = localStorage.getItem('theme-override');
+  
+  if (themeOverride === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    console.log('Applied dark mode from manual override');
+  } else if (themeOverride === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+    console.log('Applied light mode from manual override');
+  } else {
+    // No manual override - use system preference
+    // Remove data-theme attribute so CSS media query can work
+    document.documentElement.removeAttribute('data-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    console.log('Using system preference:', prefersDark ? 'dark' : 'light');
+  }
+}
+
+// Run immediately if DOM is ready, otherwise wait
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDarkMode);
+} else {
+  initDarkMode();
+}
+
 export function setupToggleHandlers() {
+  // Dark mode toggle
+  const darkModeToggle = document.getElementById('dark-mode-toggle');
+  if (darkModeToggle) {
+    // Update toggle icon based on current theme
+    function updateToggleIcon() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      
+      // Determine actual theme (manual override or system preference)
+      const actualTheme = currentTheme || (prefersDark ? 'dark' : 'light');
+      
+      // Update icon (sun for dark mode, moon for light mode would be better, but we use sun icon)
+      // Could add moon icon later if needed
+    }
+    
+    darkModeToggle.addEventListener('click', () => {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      
+      // Determine current effective theme
+      const effectiveTheme = currentTheme || (prefersDark ? 'dark' : 'light');
+      
+      if (effectiveTheme === 'dark') {
+        // Switch to light mode
+        html.setAttribute('data-theme', 'light');
+        localStorage.setItem('theme-override', 'light');
+        console.log('Switched to light mode (manual override)');
+      } else {
+        // Switch to dark mode
+        html.setAttribute('data-theme', 'dark');
+        localStorage.setItem('theme-override', 'dark');
+        console.log('Switched to dark mode (manual override)');
+      }
+      
+      updateToggleIcon();
+      
+      // Redraw heightgraph if it exists
+      redrawHeightgraphOnThemeChange();
+    });
+    
+    // Listen for system theme changes (only if no manual override)
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+      const themeOverride = localStorage.getItem('theme-override');
+      if (!themeOverride) {
+        // No manual override - remove data-theme to let CSS media query work
+        document.documentElement.removeAttribute('data-theme');
+        console.log('System theme changed, using system preference');
+        updateToggleIcon();
+        redrawHeightgraphOnThemeChange();
+      }
+    });
+    
+    // Initial icon update
+    updateToggleIcon();
+  }
+  
+  // Function to redraw heightgraph when theme changes
+  function redrawHeightgraphOnThemeChange() {
+    // Wait a bit for theme to be applied
+    setTimeout(() => {
+      if (routeState && routeState.currentRouteData) {
+        const { elevations, distance, encodedValues, coordinates } = routeState.currentRouteData;
+        if (elevations || Object.keys(encodedValues || {}).length > 0) {
+          import('../routing/heightgraph.js').then(({ drawHeightgraph }) => {
+            drawHeightgraph(
+              elevations || [],
+              distance,
+              encodedValues || {},
+              coordinates || []
+            );
+          }).catch(err => {
+            console.warn('Could not redraw heightgraph on theme change:', err);
+          });
+        }
+      }
+    }, 150);
+  }
+
   // Toggle logic for Hillshade and Terrain
   const toggleHillshade = document.getElementById('toggleHillshade');
   const toggleTerrain = document.getElementById('toggleTerrain');
