@@ -17,10 +17,33 @@ export function setupContextMenu(map) {
   }
 
   // Handle right-click on map
+  // Firefox compatibility: use both map event and direct container listener
+  const mapContainer = map.getContainer();
+  
   map.on('contextmenu', (e) => {
     e.preventDefault();
+    e.stopPropagation();
     showContextMenu(map, e.lngLat, e.point);
   });
+  
+  // Additional listener on container for Firefox (some versions need this)
+  mapContainer.addEventListener('contextmenu', (e) => {
+    // Only handle if we're clicking on the map canvas itself
+    const canvas = mapContainer.querySelector('canvas');
+    if (canvas && (e.target === canvas || canvas.contains(e.target))) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Get coordinates from event
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const point = { x, y };
+      const lngLat = map.unproject([x, y]);
+      
+      showContextMenu(map, lngLat, point);
+    }
+  }, true);
 
   // Close menu on map move/zoom
   map.on('move', () => {
@@ -55,10 +78,12 @@ function showContextMenu(map, lngLat, point) {
   
   // Get menu dimensions (need to show it first to measure)
   contextMenu.classList.remove('hidden');
+  // Force reflow for Firefox
+  contextMenu.offsetHeight;
   const menuWidth = contextMenu.offsetWidth || 200;
   const menuHeight = contextMenu.offsetHeight || 200;
 
-  // Calculate position relative to viewport
+  // Calculate position relative to viewport (use fixed positioning)
   let left = containerRect.left + point.x;
   let top = containerRect.top + point.y;
 
@@ -76,6 +101,7 @@ function showContextMenu(map, lngLat, point) {
 
   contextMenu.style.left = `${left}px`;
   contextMenu.style.top = `${top}px`;
+  contextMenu.style.position = 'fixed'; // Ensure fixed positioning for Firefox
 
   // Close menu when clicking outside (including on map)
   const closeOnOutsideClick = (e) => {

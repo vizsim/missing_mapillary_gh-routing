@@ -2279,7 +2279,7 @@ input[type="range"].slider::-moz-range-thumb,
 
 /* ───── Context Menu ───── */
 .context-menu {
-  position: absolute;
+  position: fixed;
   background: #2d2d2d;
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
@@ -2291,6 +2291,7 @@ input[type="range"].slider::-moz-range-thumb,
   color: white;
   display: flex;
   flex-direction: column;
+  pointer-events: auto;
 }
 
 .context-menu.hidden {

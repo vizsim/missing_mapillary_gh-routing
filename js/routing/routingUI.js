@@ -938,7 +938,10 @@ function setupWaypointDragHandlers(item, index, waypointsList) {
   // Drag over
   item.addEventListener('dragover', (e) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    // Firefox compatibility: set dropEffect in dragover
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move';
+    }
     
     const draggingItem = document.querySelector('.waypoint-item.dragging');
     if (!draggingItem || draggingItem === item) return;
@@ -968,10 +971,25 @@ function setupWaypointDragHandlers(item, index, waypointsList) {
   // Drop
   item.addEventListener('drop', (e) => {
     e.preventDefault();
-    const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
+    e.stopPropagation(); // Firefox: prevent event bubbling
+    
+    // Firefox compatibility: getData must be called in drop event
+    let draggedIndex;
+    try {
+      draggedIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
+    } catch (err) {
+      // Fallback for Firefox if getData fails
+      const draggingItem = document.querySelector('.waypoint-item.dragging');
+      if (draggingItem && draggingItem.dataset.index) {
+        draggedIndex = parseInt(draggingItem.dataset.index, 10);
+      } else {
+        return; // Can't determine dragged index
+      }
+    }
+    
     const dropIndex = parseInt(item.dataset.index, 10);
     
-    if (draggedIndex === dropIndex) return;
+    if (isNaN(draggedIndex) || isNaN(dropIndex) || draggedIndex === dropIndex) return;
     
     reorderWaypoint(draggedIndex, dropIndex, e.clientY, item);
   });

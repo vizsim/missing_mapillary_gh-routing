@@ -153,9 +153,13 @@ export function setupHeightgraphInteractivity(canvas, elevations, totalDistance,
   
   // Mouse move handler
   heightgraphMouseMoveHandler = (e) => {
+    // Firefox compatibility: ensure getBoundingClientRect is called fresh
     const currentRect = canvas.getBoundingClientRect();
-    const x = e.clientX - currentRect.left;
-    const y = e.clientY - currentRect.top;
+    // Firefox: use pageX/pageY as fallback if clientX/clientY not available
+    const clientX = e.clientX !== undefined ? e.clientX : (e.pageX - window.pageXOffset);
+    const clientY = e.clientY !== undefined ? e.clientY : (e.pageY - window.pageYOffset);
+    const x = clientX - currentRect.left;
+    const y = clientY - currentRect.top;
     
     // Scale mouse position if canvas is scaled by CSS
     const scaleX = storedCanvasWidth / currentRect.width;
