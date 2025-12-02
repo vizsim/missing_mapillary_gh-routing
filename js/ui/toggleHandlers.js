@@ -1,6 +1,7 @@
 // Toggle handlers for various UI elements (Hillshade, Terrain, Bike Lanes, Missing Streets, etc.)
 
 import { routeState } from '../routing/routeState.js';
+import { switchMapTheme } from './mapThemeSwitcher.js';
 
 let updateContextLayersOpacity = null;
 
@@ -20,16 +21,12 @@ function initDarkMode() {
   
   if (themeOverride === 'dark') {
     document.documentElement.setAttribute('data-theme', 'dark');
-    console.log('Applied dark mode from manual override');
   } else if (themeOverride === 'light') {
     document.documentElement.setAttribute('data-theme', 'light');
-    console.log('Applied light mode from manual override');
   } else {
     // No manual override - use system preference
     // Remove data-theme attribute so CSS media query can work
     document.documentElement.removeAttribute('data-theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    console.log('Using system preference:', prefersDark ? 'dark' : 'light');
   }
 }
 
@@ -65,19 +62,37 @@ export function setupToggleHandlers() {
       // Determine current effective theme
       const effectiveTheme = currentTheme || (prefersDark ? 'dark' : 'light');
       
+      let newTheme;
       if (effectiveTheme === 'dark') {
         // Switch to light mode
         html.setAttribute('data-theme', 'light');
         localStorage.setItem('theme-override', 'light');
-        console.log('Switched to light mode (manual override)');
+        newTheme = 'light';
       } else {
         // Switch to dark mode
         html.setAttribute('data-theme', 'dark');
         localStorage.setItem('theme-override', 'dark');
-        console.log('Switched to dark mode (manual override)');
+        newTheme = 'dark';
       }
       
       updateToggleIcon();
+      
+      // Also switch map theme if using style_light-dark.json
+      if (window.map && document.body.hasAttribute('data-using-light-dark-style')) {
+        const isDark = newTheme === 'dark';
+        switchMapTheme(window.map, isDark);
+        
+        // Update basemap button selection
+        const standardBtn = document.querySelector('.basemap-btn[data-map="standard"]');
+        const darkBtn = document.querySelector('.basemap-btn[data-map="dark"]');
+        if (isDark && darkBtn) {
+          document.querySelectorAll('.basemap-thumb, .basemap-btn').forEach(t => t.classList.remove('selected'));
+          darkBtn.classList.add('selected');
+        } else if (!isDark && standardBtn) {
+          document.querySelectorAll('.basemap-thumb, .basemap-btn').forEach(t => t.classList.remove('selected'));
+          standardBtn.classList.add('selected');
+        }
+      }
       
       // Redraw heightgraph if it exists
       redrawHeightgraphOnThemeChange();
@@ -89,8 +104,25 @@ export function setupToggleHandlers() {
       if (!themeOverride) {
         // No manual override - remove data-theme to let CSS media query work
         document.documentElement.removeAttribute('data-theme');
-        console.log('System theme changed, using system preference');
         updateToggleIcon();
+        
+        // Also switch map theme if using style_light-dark.json
+        if (window.map && document.body.hasAttribute('data-using-light-dark-style')) {
+          const isDark = e.matches;
+          switchMapTheme(window.map, isDark);
+          
+          // Update basemap button selection
+          const standardBtn = document.querySelector('.basemap-btn[data-map="standard"]');
+          const darkBtn = document.querySelector('.basemap-btn[data-map="dark"]');
+          if (isDark && darkBtn) {
+            document.querySelectorAll('.basemap-thumb, .basemap-btn').forEach(t => t.classList.remove('selected'));
+            darkBtn.classList.add('selected');
+          } else if (!isDark && standardBtn) {
+            document.querySelectorAll('.basemap-thumb, .basemap-btn').forEach(t => t.classList.remove('selected'));
+            standardBtn.classList.add('selected');
+          }
+        }
+        
         redrawHeightgraphOnThemeChange();
       }
     });

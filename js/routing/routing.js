@@ -704,14 +704,6 @@ export async function calculateRoute(map, start, end, waypoints = []) {
         routeState.customModel
       );
       
-      // Debug: Log the custom model being sent
-      // Note: Remove or comment out in production if needed
-      // console.log('🔍 Custom Model Debug:', {
-      //   profile: routeState.selectedProfile,
-      //   customModel: routeState.customModel,
-      //   requestBody: requestBody
-      // });
-      
       try {
         response = await fetch(`${GRAPHHOPPER_URL}/route`, {
           method: 'POST',
@@ -900,9 +892,15 @@ export async function calculateRoute(map, start, end, waypoints = []) {
       
       // Update route layer - will be colored by updateRouteColor based on selected encoded value
       // Initially set as single feature, will be updated by updateRouteColor
-      const routeSource = map.getSource(LAYER_IDS.ROUTE);
+      let routeSource = map.getSource(LAYER_IDS.ROUTE);
       if (!routeSource) {
-        throw new Error('Route source not found');
+        // Route source doesn't exist - likely after style change, create it now
+        console.warn('Route source not found, creating it now');
+        setupRouting(map);
+        routeSource = map.getSource(LAYER_IDS.ROUTE);
+        if (!routeSource) {
+          throw new Error('Route source not found and could not be created');
+        }
       }
       routeSource.setData({
         type: 'Feature',

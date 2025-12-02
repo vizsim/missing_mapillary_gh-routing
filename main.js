@@ -19,17 +19,17 @@ import { setupPhotonGeocoder } from './js/utils/geocoder.js';
 // 📦 Permalink
 import { setupPermalink } from './js/utils/permalink.js';
 
-let MAPTILER_API_KEY = '';
-
-const isLocalhost = location.hostname === "localhost";
-
 // Set thumbnail background images (wait for DOM to be ready)
 function setupThumbnails() {
   const standardThumb = document.querySelector('[data-map="standard"]');
+  const darkThumb = document.querySelector('[data-map="dark"]');
   const osmThumb = document.querySelector('[data-map="osm"]');
   const satelliteThumb = document.querySelector('[data-map="satellite"]');
   if (standardThumb) {
     standardThumb.style.backgroundImage = "url('./thumbs/thumb-standard.png')";
+  }
+  if (darkThumb) {
+    darkThumb.style.backgroundImage = "url('./thumbs/thumb-standard_dark.png')";
   }
   if (osmThumb) {
     osmThumb.style.backgroundImage = "url('./thumbs/thumb-osm.png')";
@@ -47,31 +47,7 @@ if (document.readyState === 'loading') {
 }
 
 (async () => {
-  try {
-    const config = await import(isLocalhost ? './js/config/config.js' : './js/config/config.public.js');
-    ({ MAPTILER_API_KEY } = config);
-    console.log(`🔑 ${isLocalhost ? "Lokale config.js" : "config.public.js"} geladen`);
-
-    initMap();
-
-  } catch (err) {
-    // Expected behavior: config.js might not exist locally (it's in .gitignore)
-    // Fallback to public config or continue without API key
-    if (isLocalhost && err.message && err.message.includes('Failed to fetch')) {
-      console.warn("⚠️ Lokale config.js nicht gefunden, verwende config.public.js als Fallback");
-      try {
-        const publicConfig = await import('./js/config/config.public.js');
-        ({ MAPTILER_API_KEY } = publicConfig);
-        console.log("🔑 config.public.js geladen (Fallback)");
-      } catch (fallbackErr) {
-        console.warn("⚠️ Konfig konnte nicht geladen werden, starte ohne API Key:", fallbackErr.message);
-      }
-    } else {
-      console.warn("⚠️ Konfig konnte nicht geladen werden, starte ohne API Key:", err.message);
-    }
-    // Continue initialization even without API key
-    initMap();
-  }
+  initMap();
 })();
 
 async function initMap() {
@@ -82,12 +58,17 @@ async function initMap() {
 
   window.map = new maplibregl.Map({
     container: "map",
-    style: "./style.json",
+    style: "./style_light-dark.json",
     center: [13.42113, 52.47676], // Default center (Berlin)
     zoom: 12,                  // Default zoom
     minZoom: 7,
     maxZoom: 20
   });
+  
+  // Initialize dark map attribute (standard map is default)
+  document.body.removeAttribute('data-dark-map');
+  // Mark that we're using style_light-dark.json
+  document.body.setAttribute('data-using-light-dark-style', 'true');
 
   // Setup permalink functionality (reads URL params and updates URL on map move)
   setupPermalink(map);
@@ -159,7 +140,7 @@ function setupUI(map) {
 function initializeMapModules(map) {
   setupPhotonGeocoder(map);
   addNavigationControl(map);
-  addBasicSources(map, MAPTILER_API_KEY);
+  addBasicSources(map);
   addBasicLayers(map);
   addBikeLanesLayers(map);
   addMissingStreetsLayers(map);

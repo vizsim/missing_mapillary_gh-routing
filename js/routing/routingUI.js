@@ -816,7 +816,7 @@ export function updateMarkers(map) {
     const svgPath = `svgs/${waypoint.svgId}`;
     el.innerHTML = `
       <div style="width: 32px; height: 32px; position: relative;">
-        <img src="${svgPath}" alt="Waypoint ${index + 1}" style="width: 100%; height: 100%; object-fit: contain;">
+        <img src="${svgPath}" alt="Waypoint ${index + 1}" class="waypoint-marker-img" style="width: 100%; height: 100%; object-fit: contain;">
         <div style="position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); background: #f59e0b; color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${index + 1}</div>
       </div>
     `;

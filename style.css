@@ -1594,6 +1594,17 @@ html[data-theme="dark"] .waypoint-svg-icon img {
   }
 }
 
+/* Waypoint marker icons on map - invert only when dark map is active */
+.waypoint-marker-img {
+  filter: none; /* Reset filter for light mode */
+  transition: filter 0.3s ease;
+}
+
+/* Make waypoint marker icons white/gray only when dark map is selected */
+body[data-dark-map="true"] .waypoint-marker-img {
+  filter: invert(1) brightness(1.2) saturate(0.8);
+}
+
 .waypoint-number {
   display: flex;
   align-items: center;

@@ -1,6 +1,6 @@
 // Map data sources configuration
 
-export function addBasicSources(map, maptilerApiKey) {
+export function addBasicSources(map) {
   // Raster: OSM Standard
   map.addSource("osm", {
     type: "raster",
