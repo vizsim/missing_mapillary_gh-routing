@@ -2661,3 +2661,51 @@ input[type="range"].slider::-moz-range-thumb,
 .context-footer a:hover {
   text-decoration: underline;
 }
+
+/* ───── Waypoint Context Menu ───── */
+.waypoint-context-menu {
+  position: fixed;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px var(--shadow-md);
+  padding: 4px;
+  min-width: 120px;
+  z-index: 1001;
+  font-family: sans-serif;
+  font-size: 13px;
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.waypoint-context-menu.hidden {
+  display: none;
+}
+
+.waypoint-context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: var(--text-primary);
+  transition: background-color 0.15s;
+  border-radius: 4px;
+}
+
+.waypoint-context-menu-item:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.waypoint-context-menu-item svg {
+  flex-shrink: 0;
+  color: #ef4444;
+  stroke: #ef4444;
+}
+
+.waypoint-context-menu-item span {
+  flex: 1;
+}
