@@ -18,8 +18,16 @@ async function getUpdateContextLayersOpacity() {
 function initDarkMode() {
   // Check for manual override first
   const themeOverride = localStorage.getItem('theme-override');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   
-  if (themeOverride === 'dark') {
+  // If override doesn't match system preference, clear it to follow system
+  if (themeOverride === 'dark' && !prefersDark) {
+    localStorage.removeItem('theme-override');
+    document.documentElement.removeAttribute('data-theme');
+  } else if (themeOverride === 'light' && prefersDark) {
+    localStorage.removeItem('theme-override');
+    document.documentElement.removeAttribute('data-theme');
+  } else if (themeOverride === 'dark') {
     document.documentElement.setAttribute('data-theme', 'dark');
   } else if (themeOverride === 'light') {
     document.documentElement.setAttribute('data-theme', 'light');
@@ -27,6 +35,7 @@ function initDarkMode() {
     // No manual override - use system preference
     // Remove data-theme attribute so CSS media query can work
     document.documentElement.removeAttribute('data-theme');
+    console.log('[Theme] System prefers:', prefersDark ? 'DARK' : 'LIGHT');
   }
 }
 
@@ -98,33 +107,42 @@ export function setupToggleHandlers() {
       redrawHeightgraphOnThemeChange();
     });
     
-    // Listen for system theme changes (only if no manual override)
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    // Listen for system theme changes
+    // If user changes system theme, we clear the manual override to follow system preference
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    mediaQuery.addEventListener('change', (e) => {
       const themeOverride = localStorage.getItem('theme-override');
-      if (!themeOverride) {
-        // No manual override - remove data-theme to let CSS media query work
-        document.documentElement.removeAttribute('data-theme');
-        updateToggleIcon();
-        
-        // Also switch map theme if using style_light-dark.json
-        if (window.map && document.body.hasAttribute('data-using-light-dark-style')) {
-          const isDark = e.matches;
-          switchMapTheme(window.map, isDark);
-          
-          // Update basemap button selection
-          const standardBtn = document.querySelector('.basemap-btn[data-map="standard"]');
-          const darkBtn = document.querySelector('.basemap-btn[data-map="dark"]');
-          if (isDark && darkBtn) {
-            document.querySelectorAll('.basemap-thumb, .basemap-btn').forEach(t => t.classList.remove('selected'));
-            darkBtn.classList.add('selected');
-          } else if (!isDark && standardBtn) {
-            document.querySelectorAll('.basemap-thumb, .basemap-btn').forEach(t => t.classList.remove('selected'));
-            standardBtn.classList.add('selected');
-          }
-        }
-        
-        redrawHeightgraphOnThemeChange();
+      
+      // If user changes system theme, clear manual override to follow system
+      // This allows the page to react to system theme changes even if override was set
+      if (themeOverride) {
+        localStorage.removeItem('theme-override');
       }
+      
+      // Apply system preference
+      // Remove data-theme to let CSS media query work
+      document.documentElement.removeAttribute('data-theme');
+      updateToggleIcon();
+      
+      // Also switch map theme if using style_light-dark.json
+      if (window.map && document.body.hasAttribute('data-using-light-dark-style')) {
+        const isDark = e.matches;
+        switchMapTheme(window.map, isDark);
+        
+        // Update basemap button selection
+        const standardBtn = document.querySelector('.basemap-btn[data-map="standard"]');
+        const darkBtn = document.querySelector('.basemap-btn[data-map="dark"]');
+        if (isDark && darkBtn) {
+          document.querySelectorAll('.basemap-thumb, .basemap-btn').forEach(t => t.classList.remove('selected'));
+          darkBtn.classList.add('selected');
+        } else if (!isDark && standardBtn) {
+          document.querySelectorAll('.basemap-thumb, .basemap-btn').forEach(t => t.classList.remove('selected'));
+          standardBtn.classList.add('selected');
+        }
+      }
+      
+      redrawHeightgraphOnThemeChange();
     });
     
     // Initial icon update
