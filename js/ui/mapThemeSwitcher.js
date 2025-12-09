@@ -171,49 +171,60 @@ const LAYER_MAPPING = {
  * @param {boolean} isDark - Whether to switch to dark theme
  */
 export function switchMapTheme(map, isDark) {
-  if (!map || !map.isStyleLoaded()) {
-    console.warn('Map not ready for theme switch');
+  if (!map) {
+    return;
+  }
+  
+  if (!map.isStyleLoaded() || !map.loaded()) {
     return;
   }
 
   const theme = isDark ? THEME_COLORS.dark : THEME_COLORS.light;
 
   // Set background color
-  if (map.getLayer('background')) {
-    map.setPaintProperty('background', 'background-color', theme.background);
+  try {
+    if (map.getLayer('background')) {
+      map.setPaintProperty('background', 'background-color', theme.background);
+    }
+  } catch (e) {
+    // Silently fail
   }
 
   // Apply colors to all layers
   Object.keys(LAYER_MAPPING).forEach(layerId => {
-    const layer = map.getLayer(layerId);
-    if (!layer) return;
+    try {
+      const layer = map.getLayer(layerId);
+      if (!layer) return;
 
-    const layerThemeKey = LAYER_MAPPING[layerId];
-    const colors = theme[layerThemeKey];
-    if (!colors) return;
+      const layerThemeKey = LAYER_MAPPING[layerId];
+      const colors = theme[layerThemeKey];
+      if (!colors) return;
 
-    // Apply fill colors
-    if (colors.fillColor !== undefined) {
-      map.setPaintProperty(layerId, 'fill-color', colors.fillColor);
-    }
-    if (colors.fillOpacity !== undefined) {
-      map.setPaintProperty(layerId, 'fill-opacity', colors.fillOpacity);
-    }
-    if (colors.fillOutlineColor !== undefined) {
-      map.setPaintProperty(layerId, 'fill-outline-color', colors.fillOutlineColor);
-    }
+      // Apply fill colors
+      if (colors.fillColor !== undefined) {
+        map.setPaintProperty(layerId, 'fill-color', colors.fillColor);
+      }
+      if (colors.fillOpacity !== undefined) {
+        map.setPaintProperty(layerId, 'fill-opacity', colors.fillOpacity);
+      }
+      if (colors.fillOutlineColor !== undefined) {
+        map.setPaintProperty(layerId, 'fill-outline-color', colors.fillOutlineColor);
+      }
 
-    // Apply line colors
-    if (colors.lineColor !== undefined) {
-      map.setPaintProperty(layerId, 'line-color', colors.lineColor);
-    }
+      // Apply line colors
+      if (colors.lineColor !== undefined) {
+        map.setPaintProperty(layerId, 'line-color', colors.lineColor);
+      }
 
-    // Apply text colors
-    if (colors.textColor !== undefined) {
-      map.setPaintProperty(layerId, 'text-color', colors.textColor);
-    }
-    if (colors.textHaloColor !== undefined) {
-      map.setPaintProperty(layerId, 'text-halo-color', colors.textHaloColor);
+      // Apply text colors
+      if (colors.textColor !== undefined) {
+        map.setPaintProperty(layerId, 'text-color', colors.textColor);
+      }
+      if (colors.textHaloColor !== undefined) {
+        map.setPaintProperty(layerId, 'text-halo-color', colors.textHaloColor);
+      }
+    } catch (e) {
+      // Silently fail
     }
   });
 

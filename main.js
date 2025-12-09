@@ -19,6 +19,9 @@ import { setupPhotonGeocoder } from './js/utils/geocoder.js';
 // 📦 Permalink
 import { setupPermalink } from './js/utils/permalink.js';
 
+// 📦 Map Theme
+import { applyInitialMapTheme } from './js/ui/mapThemeInitializer.js';
+
 // Set thumbnail background images (wait for DOM to be ready)
 function setupThumbnails() {
   const standardThumb = document.querySelector('[data-map="standard"]');
@@ -79,6 +82,9 @@ async function initMap() {
     setupRouting(map);
     setupContextMenu(map);
     updateExternalLinks(map);
+    
+    // Apply initial theme based on system preference or manual override
+    applyInitialMapTheme(map);
   });
 
   // Update external links on map move/zoom
@@ -145,6 +151,7 @@ function initializeMapModules(map) {
   addBikeLanesLayers(map);
   addMissingStreetsLayers(map);
 }
+
 
 
 
