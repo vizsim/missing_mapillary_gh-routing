@@ -128,20 +128,7 @@ export function setupHeightgraphInteractivity(canvas, elevations, totalDistance,
   if (!tooltip) {
     tooltip = document.createElement('div');
     tooltip.id = 'heightgraph-tooltip';
-    tooltip.style.cssText = `
-      position: absolute;
-      background: rgba(0, 0, 0, 0.8);
-      color: white;
-      padding: 6px 10px;
-      border-radius: 4px;
-      font-size: 11px;
-      pointer-events: none;
-      z-index: 1000;
-      display: none;
-      white-space: normal;
-      max-width: 250px;
-      word-wrap: break-word;
-    `;
+    // Styles are now handled by CSS with dark mode support
     document.body.appendChild(tooltip);
   }
   
