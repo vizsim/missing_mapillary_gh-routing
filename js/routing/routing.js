@@ -658,9 +658,13 @@ export async function calculateRoute(map, start, end, waypoints = []) {
       routeState.waypointAddresses = reorderedAddresses;
       
       // Update UI to reflect new order
-      import('./routingUI.js').then(({ updateMarkers, updateWaypointsList, updateCoordinateTooltips }) => {
+      import('./routingUI.js').then(({ updateMarkers }) => {
         updateMarkers(map);
+      });
+      import('./waypoints/waypointList.js').then(({ updateWaypointsList }) => {
         updateWaypointsList();
+      });
+      import('./coordinates/coordinateTooltips.js').then(({ updateCoordinateTooltips }) => {
         updateCoordinateTooltips();
       });
     }
@@ -1137,9 +1141,13 @@ export function clearRoute(map) {
   }
   
   // Update UI to clear markers and tooltips
-  import('./routingUI.js').then(({ updateMarkers, updateWaypointsList, updateCoordinateTooltips }) => {
+  import('./routingUI.js').then(({ updateMarkers }) => {
     updateMarkers(map);
+  });
+  import('./waypoints/waypointList.js').then(({ updateWaypointsList }) => {
     updateWaypointsList(); // This will ensure the list is empty (routeState.waypoints is already cleared)
+  });
+  import('./coordinates/coordinateTooltips.js').then(({ updateCoordinateTooltips }) => {
     updateCoordinateTooltips(); // Clear tooltips
   });
   

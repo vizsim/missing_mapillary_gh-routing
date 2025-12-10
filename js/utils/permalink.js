@@ -1,7 +1,9 @@
 // permalink.js - Permalink functionality for map state, routing, and context layers
 
 import { routeState } from '../routing/routeState.js';
-import { updateMarkers, updateWaypointsList, getRandomWaypointSvg } from '../routing/routingUI.js';
+import { updateMarkers, getRandomWaypointSvg } from '../routing/routingUI.js';
+import { updateWaypointsList } from '../routing/waypoints/waypointList.js';
+import { updateCoordinateTooltips } from '../routing/coordinates/coordinateTooltips.js';
 import {
   supportsCustomModel,
   ensureCustomModel,
@@ -302,7 +304,6 @@ export class Permalink {
     if (routeState.startPoint || routeState.endPoint || routeState.waypoints.length > 0) {
       updateMarkers(this.map);
       updateWaypointsList();
-      const { updateCoordinateTooltips } = await import('../routing/routingUI.js');
       updateCoordinateTooltips();
     }
     

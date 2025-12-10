@@ -2,7 +2,7 @@
  * Waypoint Context Menu - Shows delete option when right-clicking on waypoint markers
  */
 
-import { removeWaypoint } from '../routingUI.js';
+import { removeWaypoint } from '../waypoints/waypointManager.js';
 
 /**
  * Show waypoint context menu for deletion

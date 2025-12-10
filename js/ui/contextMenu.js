@@ -1,6 +1,7 @@
 // Context menu functionality for right-click on map
 
-import { setStartPoint, setEndPoint, addWaypoint } from '../routing/routingUI.js';
+import { setStartPoint, setEndPoint } from '../routing/routingUI.js';
+import { addWaypoint } from '../routing/waypoints/waypointManager.js';
 
 let contextMenu = null;
 let currentLngLat = null;

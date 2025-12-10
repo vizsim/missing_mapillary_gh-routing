@@ -5,7 +5,8 @@
 
 import { routeState } from '../routeState.js';
 import { reverseGeocode } from '../../utils/geocoder.js';
-import { updateWaypointsList, updateCoordinateTooltips } from '../routingUI.js';
+import { updateWaypointsList } from '../waypoints/waypointList.js';
+import { updateCoordinateTooltips } from '../coordinates/coordinateTooltips.js';
 import { recalculateRouteIfReady } from '../routeRecalculator.js';
 import { showWaypointContextMenu } from './waypointContextMenu.js';
 
