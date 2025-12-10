@@ -11,6 +11,9 @@ import {
 } from './customModel.js';
 import { setupRoutingInputGeocoder, reverseGeocode } from '../utils/geocoder.js';
 import { ERROR_MESSAGES, MAPILLARY_SLIDER_VALUES } from '../utils/constants.js';
+import { recalculateRouteIfReady } from './routeRecalculator.js';
+import { isRouteCalculationInProgress } from './routing.js';
+import { createStartMarker, createEndMarker, createWaypointMarker } from './markers/markerFactory.js';
 
 // Available SVG files for waypoints
 const WAYPOINT_SVGS = [
@@ -127,12 +130,7 @@ export function setupUIHandlers(map) {
       updateRouteColorByProfile(map, routeState.selectedProfile);
       
       // If route already exists, recalculate with new profile
-      if (routeState.startPoint && routeState.endPoint) {
-        // Import dynamically to avoid circular dependency
-        import('./routing.js').then(({ calculateRoute }) => {
-          calculateRoute(map, routeState.startPoint, routeState.endPoint, routeState.waypoints);
-        });
-      }
+      recalculateRouteIfReady();
     });
   });
   
@@ -274,10 +272,7 @@ export function setupUIHandlers(map) {
   if (calculateBtn) {
     calculateBtn.addEventListener('click', () => {
       if (routeState.startPoint && routeState.endPoint) {
-        // Import dynamically to avoid circular dependency
-        import('./routing.js').then(({ calculateRoute }) => {
-          calculateRoute(map, routeState.startPoint, routeState.endPoint, routeState.waypoints);
-        });
+        recalculateRouteIfReady();
       } else {
         alert(ERROR_MESSAGES.MISSING_START_END);
       }
@@ -363,8 +358,6 @@ export function setupUIHandlers(map) {
         return; // Already trying to calculate
       }
       
-      const { calculateRoute, isRouteCalculationInProgress } = await import('./routing.js');
-      
       // Check if a calculation is already in progress
       if (isRouteCalculationInProgress()) {
         // Wait a bit and try again
@@ -390,7 +383,7 @@ export function setupUIHandlers(map) {
       pendingRecalculation = false;
       
       // Try to calculate route (include waypoints)
-      calculateRoute(map, routeState.startPoint, routeState.endPoint, routeState.waypoints);
+      recalculateRouteIfReady();
       
       // Reset slider start time
       sliderStartTime = null;
@@ -508,9 +501,7 @@ export function setupUIHandlers(map) {
       
       // If optimization is enabled and we have waypoints, recalculate route with optimization
       if (e.target.checked && routeState.startPoint && routeState.endPoint && routeState.waypoints.length > 1) {
-        import('./routing.js').then(({ calculateRoute }) => {
-          calculateRoute(map, routeState.startPoint, routeState.endPoint, routeState.waypoints);
-        });
+        recalculateRouteIfReady();
       }
     });
   }
@@ -621,12 +612,7 @@ export async function setStartPoint(map, lngLat, options = {}) {
   updateCoordinateTooltips();
   
   // Automatically calculate route if both points are set
-  if (routeState.startPoint && routeState.endPoint) {
-    // Import dynamically to avoid circular dependency
-    import('./routing.js').then(({ calculateRoute }) => {
-      calculateRoute(map, routeState.startPoint, routeState.endPoint, routeState.waypoints);
-    });
-  }
+  recalculateRouteIfReady();
 }
 
 export async function setEndPoint(map, lngLat, options = {}) {
@@ -666,12 +652,7 @@ export async function setEndPoint(map, lngLat, options = {}) {
   updateCoordinateTooltips();
   
   // Automatically calculate route if both points are set
-  if (routeState.startPoint && routeState.endPoint) {
-    // Import dynamically to avoid circular dependency
-    import('./routing.js').then(({ calculateRoute }) => {
-      calculateRoute(map, routeState.startPoint, routeState.endPoint, routeState.waypoints);
-    });
-  }
+  recalculateRouteIfReady();
 }
 
 export function updateMarkers(map) {
@@ -690,181 +671,19 @@ export function updateMarkers(map) {
   });
   routeState.waypointMarkers = [];
   
-  // Create draggable start marker with pin icon containing rocket
+  // Create start marker using factory
   if (routeState.startPoint) {
-    const el = document.createElement('div');
-    el.className = 'custom-marker start-marker';
-    el.style.width = '24px';
-    el.style.height = '24px';
-    el.style.cursor = 'grab';
-    el.innerHTML = `
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="#10b981" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-        <g transform="translate(12, 10) scale(0.6) translate(-12, -12)">
-          <path d="m9.9 16.97 7.436-7.436a8 8 0 0 0 2.145-3.89l.318-1.401-1.402.317a8 8 0 0 0-3.89 2.146L9.192 12.02m.707 4.95 2.122 3.535c1.178-1.178 2.828-2.828 0-5.657L9.899 16.97zm0 0-2.828-2.829m0 0L3.536 12.02c1.178-1.179 2.828-2.829 5.656 0m-2.12 2.121 2.12-2.121M4.95 16.263s-1.703 2.54-.707 3.536c.995.996 3.535-.707 3.535-.707" fill="white" stroke="white" stroke-width="1.5"/>
-        </g>
-      </svg>
-    `;
-    el.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))';
-    
-    routeState.startMarker = new maplibregl.Marker({
-      element: el,
-      draggable: true,
-      anchor: 'bottom'
-    })
-      .setLngLat(routeState.startPoint)
-      .addTo(map);
-    
-    routeState.startMarker.on('dragstart', () => {
-      el.style.cursor = 'grabbing';
-    });
-    
-    routeState.startMarker.on('dragend', async () => {
-      el.style.cursor = 'grab';
-      const lngLat = routeState.startMarker.getLngLat();
-      routeState.startPoint = [lngLat.lng, lngLat.lat];
-      
-      const startInput = document.getElementById('start-input');
-      if (startInput) {
-        startInput.value = `${lngLat.lat.toFixed(5)}, ${lngLat.lng.toFixed(5)}`;
-      }
-      
-      // Update address for moved start point
-      routeState.startAddress = await reverseGeocode(lngLat.lng, lngLat.lat);
-      updateCoordinateTooltips();
-      
-      // Recalculate route if end point exists
-      if (routeState.endPoint) {
-        // Import dynamically to avoid circular dependency
-        import('./routing.js').then(({ calculateRoute }) => {
-          calculateRoute(map, routeState.startPoint, routeState.endPoint, routeState.waypoints);
-        });
-      }
-    });
+    routeState.startMarker = createStartMarker(map, routeState.startPoint);
   }
   
-  // Create draggable end marker with pin icon containing flag
+  // Create end marker using factory
   if (routeState.endPoint) {
-    const el = document.createElement('div');
-    el.className = 'custom-marker end-marker';
-    el.style.width = '24px';
-    el.style.height = '24px';
-    el.style.cursor = 'grab';
-    el.innerHTML = `
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="#ef4444" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-        <g transform="translate(12, 10) scale(0.4) translate(-16, -16)">
-          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="white" stroke-miterlimit="10">
-            <!-- Flaggenstange (dicker) -->
-            <line x1="6" y1="28" x2="6" y2="5" stroke="white" stroke-width="3" stroke-linecap="round"/>
-            <!-- Flaggenform -->
-            <polyline points="6,5 26,5 26,19 6,19" stroke="white" stroke-width="1.5"/>
-            <!-- Schachbrettmuster -->
-            <rect x="6" y="5" width="10" height="7" fill="white"/>
-            <rect x="16" y="12" width="10" height="7" fill="white"/>
-          </svg>
-        </g>
-      </svg>
-    `;
-    el.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))';
-    
-    routeState.endMarker = new maplibregl.Marker({
-      element: el,
-      draggable: true,
-      anchor: 'bottom'
-    })
-      .setLngLat(routeState.endPoint)
-      .addTo(map);
-    
-    routeState.endMarker.on('dragstart', () => {
-      el.style.cursor = 'grabbing';
-    });
-    
-    routeState.endMarker.on('dragend', async () => {
-      el.style.cursor = 'grab';
-      const lngLat = routeState.endMarker.getLngLat();
-      routeState.endPoint = [lngLat.lng, lngLat.lat];
-      
-      const endInput = document.getElementById('end-input');
-      if (endInput) {
-        endInput.value = `${lngLat.lat.toFixed(5)}, ${lngLat.lng.toFixed(5)}`;
-      }
-      
-      // Update address for moved end point
-      routeState.endAddress = await reverseGeocode(lngLat.lng, lngLat.lat);
-      updateCoordinateTooltips();
-      
-      // Recalculate route if start point exists
-      if (routeState.startPoint) {
-        // Import dynamically to avoid circular dependency
-        import('./routing.js').then(({ calculateRoute }) => {
-          calculateRoute(map, routeState.startPoint, routeState.endPoint, routeState.waypoints);
-        });
-      }
-    });
+    routeState.endMarker = createEndMarker(map, routeState.endPoint);
   }
   
-  // Create waypoint markers
+  // Create waypoint markers using factory
   routeState.waypoints.forEach((waypoint, index) => {
-    const el = document.createElement('div');
-    el.className = 'custom-marker waypoint-marker';
-    el.style.width = '32px';
-    el.style.height = '32px';
-    el.style.cursor = 'grab';
-    
-    // Load and display the waypoint's unique SVG
-    const svgPath = `svgs/${waypoint.svgId}`;
-    el.innerHTML = `
-      <div style="width: 32px; height: 32px; position: relative;">
-        <img src="${svgPath}" alt="Waypoint ${index + 1}" class="waypoint-marker-img" style="width: 100%; height: 100%; object-fit: contain;">
-        <div style="position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); background: #f59e0b; color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${index + 1}</div>
-      </div>
-    `;
-    el.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))';
-    
-    const marker = new maplibregl.Marker({
-      element: el,
-      draggable: true,
-      anchor: 'bottom'
-    })
-      .setLngLat([waypoint.lng, waypoint.lat])
-      .addTo(map);
-    
-    marker.on('dragstart', () => {
-      el.style.cursor = 'grabbing';
-    });
-    
-    marker.on('dragend', async () => {
-      el.style.cursor = 'grab';
-      const lngLat = marker.getLngLat();
-      // Preserve SVG ID when updating coordinates
-      routeState.waypoints[index] = {
-        lng: lngLat.lng,
-        lat: lngLat.lat,
-        svgId: waypoint.svgId
-      };
-      
-      // Update address for moved waypoint
-      const address = await reverseGeocode(lngLat.lng, lngLat.lat);
-      routeState.waypointAddresses[index] = address;
-      
-      updateWaypointsList();
-      
-      // Recalculate route if both start and end points exist
-      if (routeState.startPoint && routeState.endPoint) {
-        import('./routing.js').then(({ calculateRoute }) => {
-          calculateRoute(map, routeState.startPoint, routeState.endPoint, routeState.waypoints);
-        });
-      }
-    });
-    
-    // Add context menu for waypoint deletion
-    el.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      showWaypointContextMenu(map, marker, index, e);
-    });
-    
+    const marker = createWaypointMarker(map, waypoint, index);
     routeState.waypointMarkers.push(marker);
   });
   
@@ -1131,18 +950,9 @@ function handleWaypointsReordered() {
   updateMarkers(routeState.mapInstance);
   
   // Recalculate route if both start and end points exist
-  if (routeState.startPoint && routeState.endPoint) {
-    requestAnimationFrame(() => {
-      import('./routing.js').then(({ calculateRoute }) => {
-        calculateRoute(
-          routeState.mapInstance,
-          routeState.startPoint,
-          routeState.endPoint,
-          routeState.waypoints
-        );
-      });
-    });
-  }
+  requestAnimationFrame(() => {
+    recalculateRouteIfReady();
+  });
 }
 
 // Add waypoint
@@ -1166,11 +976,7 @@ export async function addWaypoint(map, lngLat) {
   updateCoordinateTooltips();
   
   // Recalculate route if both start and end points exist
-  if (routeState.startPoint && routeState.endPoint) {
-    import('./routing.js').then(({ calculateRoute }) => {
-      calculateRoute(map, routeState.startPoint, routeState.endPoint, routeState.waypoints);
-    });
-  }
+  recalculateRouteIfReady();
 }
 
 // Remove waypoint
@@ -1190,108 +996,10 @@ export function removeWaypoint(index) {
     updateCoordinateTooltips();
     
     // Recalculate route if both start and end points exist
-    if (routeState.startPoint && routeState.endPoint) {
-      import('./routing.js').then(({ calculateRoute }) => {
-        calculateRoute(map, routeState.startPoint, routeState.endPoint, routeState.waypoints);
-      });
-    }
+    recalculateRouteIfReady();
   }
 }
 
-/**
- * Show waypoint context menu for deletion
- * @param {maplibregl.Map} map - Map instance
- * @param {maplibregl.Marker} marker - Waypoint marker
- * @param {number} waypointIndex - Index of waypoint in array
- * @param {Event} e - Context menu event
- */
-function showWaypointContextMenu(map, marker, waypointIndex, e) {
-  const menu = document.getElementById('waypoint-context-menu');
-  if (!menu) return;
-  
-  // Hide main context menu if visible
-  const mainMenu = document.getElementById('context-menu');
-  if (mainMenu) {
-    mainMenu.classList.add('hidden');
-  }
-  
-  // Get marker position on screen
-  const markerElement = marker.getElement();
-  const rect = markerElement.getBoundingClientRect();
-  
-  // Position menu near the marker
-  let left = rect.left + rect.width / 2;
-  let top = rect.top;
-  
-  // Show menu to get dimensions
-  menu.classList.remove('hidden');
-  const menuWidth = menu.offsetWidth || 120;
-  const menuHeight = menu.offsetHeight || 50;
-  
-  // Adjust position to center above marker
-  left = left - menuWidth / 2;
-  top = top - menuHeight - 8; // 8px spacing above marker
-  
-  // Ensure menu stays within viewport
-  if (left < 0) left = 8;
-  if (left + menuWidth > window.innerWidth) left = window.innerWidth - menuWidth - 8;
-  if (top < 0) top = rect.bottom + 8; // Show below if no space above
-  
-  menu.style.left = `${left}px`;
-  menu.style.top = `${top}px`;
-  menu.style.position = 'fixed';
-  
-  // Store waypoint index for deletion
-  menu.dataset.waypointIndex = waypointIndex;
-  
-  // Close menu when clicking outside
-  const closeOnOutsideClick = (clickEvent) => {
-    if (menu && !menu.contains(clickEvent.target) && !markerElement.contains(clickEvent.target)) {
-      hideWaypointContextMenu();
-      document.removeEventListener('click', closeOnOutsideClick);
-      document.removeEventListener('contextmenu', closeOnOutsideClick);
-    }
-  };
-  
-  // Use setTimeout to avoid immediate close
-  setTimeout(() => {
-    document.addEventListener('click', closeOnOutsideClick, true);
-    document.addEventListener('contextmenu', closeOnOutsideClick, true);
-  }, 100);
-  
-  // Setup delete handler (only once)
-  const deleteBtn = document.getElementById('waypoint-context-menu-delete');
-  if (deleteBtn && !deleteBtn.dataset.handlerSetup) {
-    deleteBtn.dataset.handlerSetup = 'true';
-    
-    const stopEvent = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-    };
-    
-    deleteBtn.addEventListener('mousedown', stopEvent, true);
-    deleteBtn.addEventListener('click', (e) => {
-      stopEvent(e);
-      const index = parseInt(menu.dataset.waypointIndex);
-      if (!isNaN(index)) {
-        hideWaypointContextMenu();
-        removeWaypoint(index);
-      }
-    }, true);
-  }
-}
-
-/**
- * Hide waypoint context menu
- */
-function hideWaypointContextMenu() {
-  const menu = document.getElementById('waypoint-context-menu');
-  if (menu) {
-    menu.classList.add('hidden');
-    delete menu.dataset.waypointIndex;
-  }
-}
 
 export async function geocodeAddress(query) {
   try {

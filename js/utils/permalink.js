@@ -500,8 +500,8 @@ export class Permalink {
     
     const checkAndCalculate = () => {
       if (this.map.getSource('route') && routeState.startPoint && routeState.endPoint) {
-        import('../routing/routing.js').then(({ calculateRoute }) => {
-          calculateRoute(this.map, routeState.startPoint, routeState.endPoint, routeState.waypoints);
+        import('../routing/routeRecalculator.js').then(({ recalculateRouteIfReady }) => {
+          recalculateRouteIfReady();
         });
         this.pendingRouteCalculation = false;
       } else if (this.pendingRouteCalculation && retryCount < maxRetries) {

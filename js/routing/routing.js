@@ -25,6 +25,7 @@ import {
   LAYER_IDS,
   CONTEXT_LAYER_IDS
 } from '../utils/constants.js';
+import { setCalculateRouteFunction } from './routeRecalculator.js';
 
 // Flag to prevent parallel route calculations
 let routeCalculationInProgress = false;
@@ -618,6 +619,9 @@ export async function calculateRoute(map, start, end, waypoints = []) {
     console.warn(ERROR_MESSAGES.ROUTE_CALCULATION_IN_PROGRESS);
     return;
   }
+  
+  // Register this function with routeRecalculator (only once)
+  setCalculateRouteFunction(calculateRoute);
   
   // Validate coordinates
   validateCoordinates(start, 'Startpunkt');
