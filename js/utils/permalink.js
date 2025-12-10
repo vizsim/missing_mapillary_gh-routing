@@ -11,6 +11,7 @@ import {
   getMapillaryPriority,
   updateMapillaryPriority,
   updateCarAccessRule,
+  updateUnpavedRoadsRule,
   defaultCarCustomModel,
   defaultBikeCustomModel
 } from '../routing/customModel.js';
@@ -170,6 +171,11 @@ export class Permalink {
       // Car access (only for car_customizable, only if enabled)
       if (routeState.selectedProfile === 'car_customizable' && routeState.allowCarAccess) {
         paramParts.push('allowCarAccess=1');
+      }
+      
+      // Unpaved roads (only for car_customizable, only if enabled)
+      if (routeState.selectedProfile === 'car_customizable' && routeState.avoidUnpavedRoads) {
+        paramParts.push('avoidUnpavedRoads=1');
       }
     }
     
@@ -400,6 +406,28 @@ export class Permalink {
         routeState.customModel,
         routeState.allowCarAccess
       );
+      // Update unpaved roads rule
+      routeState.customModel = updateUnpavedRoadsRule(
+        routeState.customModel,
+        routeState.avoidUnpavedRoads
+      );
+    }
+    
+    // Load unpaved roads setting (for car_customizable profile only)
+    const avoidUnpavedRoadsParam = params.get('avoidUnpavedRoads');
+    if (avoidUnpavedRoadsParam === '1' || avoidUnpavedRoadsParam === 'true') {
+      routeState.avoidUnpavedRoads = true;
+    } else {
+      // Default: false (slightly reduce unpaved roads)
+      routeState.avoidUnpavedRoads = false;
+    }
+    
+    // Update custom model with unpaved roads rule
+    if (routeState.selectedProfile === 'car_customizable' && routeState.customModel) {
+      routeState.customModel = updateUnpavedRoadsRule(
+        routeState.customModel,
+        routeState.avoidUnpavedRoads
+      );
     }
     
     // Initialize slider and car access switch if customizable profile is selected
@@ -444,6 +472,14 @@ export class Permalink {
             if (carAccessContainer && carAccessSwitch) {
               carAccessContainer.style.display = 'block';
               carAccessSwitch.checked = routeState.allowCarAccess;
+            }
+            
+            // Initialize unpaved roads switch
+            const unpavedRoadsContainer = document.getElementById('unpaved-roads-container');
+            const unpavedRoadsSwitch = document.getElementById('avoid-unpaved-roads');
+            if (unpavedRoadsContainer && unpavedRoadsSwitch) {
+              unpavedRoadsContainer.style.display = 'block';
+              unpavedRoadsSwitch.checked = routeState.avoidUnpavedRoads;
             }
           }
         }
@@ -638,6 +674,11 @@ export class Permalink {
       // Car access (only for car_customizable, only if enabled)
       if (routeState.selectedProfile === 'car_customizable' && routeState.allowCarAccess) {
         paramParts.push('allowCarAccess=1');
+      }
+      
+      // Unpaved roads (only for car_customizable, only if enabled)
+      if (routeState.selectedProfile === 'car_customizable' && routeState.avoidUnpavedRoads) {
+        paramParts.push('avoidUnpavedRoads=1');
       }
     }
     

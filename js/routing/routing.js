@@ -12,7 +12,8 @@ import {
   buildPostRequestBodyWithCustomModel,
   getMapillaryPriority,
   updateMapillaryPriority,
-  updateCarAccessRule
+  updateCarAccessRule,
+  updateUnpavedRoadsRule
 } from './customModel.js';
 import { calculateDistance } from './heightgraph/heightgraphUtils.js';
 import { optimizeWaypoints } from './waypointOptimizer.js';
@@ -705,6 +706,11 @@ export async function calculateRoute(map, start, end, waypoints = []) {
         routeState.customModel = updateCarAccessRule(
           routeState.customModel,
           routeState.allowCarAccess
+        );
+        // Update unpaved roads rule
+        routeState.customModel = updateUnpavedRoadsRule(
+          routeState.customModel,
+          routeState.avoidUnpavedRoads
         );
       }
     }

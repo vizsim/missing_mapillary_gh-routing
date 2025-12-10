@@ -38,9 +38,15 @@ export const defaultCarCustomModel = {
     {"if": "road_class==SERVICE", "multiply_by": 0.5},
     //{"if": "road_class==TRACK", "multiply_by": 0.4},
     
-    // Schlechte Oberflächen abwerten
-    {"if": "surface==SAND||surface==GRAVEL||surface==GROUND||surface==DIRT", "multiply_by": 0.8},
-    {"if": "surface==COBBLESTONE", "multiply_by": 0.9},
+    // Oberflächenbewertung
+    // Befestigte Oberflächen: Keine Reduktion (Standard)
+    // Diese Regel wird dynamisch durch updateUnpavedRoadsRule() angepasst
+    // Standard: unbefestigte Wege leicht abwerten (0.7-0.8)
+    // Wenn "unbefestigte Wege meiden" aktiviert: stark abwerten (0.2-0.3)
+    {"if": "surface==GRAVEL||surface==FINE_GRAVEL||surface==DIRT||surface==GROUND||surface==SAND", "multiply_by": 0.7},
+    {"if": "surface==PAVING_STONES||surface==COBBLESTONE||surface==COMPACTED", "multiply_by": 0.8},
+    // Wenn surface fehlt: vorsichtig abwerten (könnte unbefestigt sein)
+    {"if": "surface==null", "multiply_by": 0.6},
     
     // Mapillary coverage preference (can be adjusted via slider)
     // Default: 1.0 (as documented in comments above and defined in constants.js DEFAULTS.MAPILLARY_WEIGHT)
@@ -63,10 +69,10 @@ export const defaultCarCustomModel = {
     // Fußwege, Wege, Treppen und Radwege sperren
     {"if": "road_class==FOOTWAY||road_class==PATH||road_class==STEPS||road_class==CYCLEWAY", "limit_to": 0},
     
-    // Schlechte Oberflächen reduzieren Geschwindigkeit
+    // Oberflächen reduzieren Geschwindigkeit
     {"if": "surface==SAND", "multiply_by": 0.6},
-    {"if": "surface==GRAVEL||surface==GROUND||surface==DIRT", "multiply_by": 0.8},
-    {"if": "surface==COBBLESTONE", "multiply_by": 0.9}
+    {"if": "surface==GRAVEL||surface==FINE_GRAVEL||surface==GROUND||surface==DIRT", "multiply_by": 0.8},
+    {"if": "surface==PAVING_STONES||surface==COBBLESTONE||surface==COMPACTED", "multiply_by": 0.9}
   ]
 };
 
@@ -393,5 +399,142 @@ export function getCarAccessRule(customModel) {
   // If rule exists, restricted roads are blocked (return false)
   // If rule doesn't exist, restricted roads are allowed (return true)
   return carAccessRule === undefined;
+}
+
+// Update unpaved roads rule in custom model (for car_customizable profile only)
+// avoidUnpavedRoads: true = strongly avoid unpaved roads (0.2-0.3), false = slightly reduce (0.7-0.8, default)
+export function updateUnpavedRoadsRule(customModel, avoidUnpavedRoads) {
+  if (!customModel || !customModel.priority) {
+    return customModel;
+  }
+  
+  // Unbefestigte Oberflächen (nur gültige GraphHopper Surface-Werte)
+  const unpavedSurfaces = "surface==GRAVEL||surface==FINE_GRAVEL||surface==DIRT||surface==GROUND||surface==SAND";
+  // Halbwegs befestigt
+  const semiPavedSurfaces = "surface==PAVING_STONES||surface==COBBLESTONE||surface==COMPACTED";
+  // Wenn surface fehlt
+  const missingSurface = "surface==null";
+  
+  // Find existing unpaved roads rules
+  const unpavedRuleIndex = customModel.priority.findIndex(
+    r => r.if && (r.if.includes('GRAVEL') || r.if.includes('DIRT') || 
+                  r.if.includes('GROUND') || r.if.includes('SAND'))
+  );
+  const semiPavedRuleIndex = customModel.priority.findIndex(
+    r => r.if && (r.if.includes('PAVING_STONES') || 
+                  r.if.includes('COBBLESTONE') || r.if.includes('COMPACTED'))
+  );
+  const missingSurfaceRuleIndex = customModel.priority.findIndex(
+    r => r.if && r.if.includes('surface==null')
+  );
+  
+  // Update or add unpaved surfaces rule
+  if (avoidUnpavedRoads) {
+    // Strongly avoid unpaved roads
+    const newUnpavedRule = {
+      "if": unpavedSurfaces,
+      "multiply_by": 0.25
+    };
+    if (unpavedRuleIndex !== -1) {
+      customModel.priority[unpavedRuleIndex] = newUnpavedRule;
+    } else {
+      // Find position after road_class rules, before mapillary
+      const mapillaryIndex = customModel.priority.findIndex(
+        r => r.if && r.if.includes('mapillary_coverage')
+      );
+      if (mapillaryIndex !== -1) {
+        customModel.priority.splice(mapillaryIndex, 0, newUnpavedRule);
+      } else {
+        customModel.priority.push(newUnpavedRule);
+      }
+    }
+    
+    // Semi-paved: reduce more
+    const newSemiPavedRule = {
+      "if": semiPavedSurfaces,
+      "multiply_by": 0.5
+    };
+    if (semiPavedRuleIndex !== -1) {
+      customModel.priority[semiPavedRuleIndex] = newSemiPavedRule;
+    } else {
+      const unpavedIndex = customModel.priority.findIndex(
+        r => r.if && (r.if.includes('GRAVEL') || r.if.includes('DIRT'))
+      );
+      if (unpavedIndex !== -1) {
+        customModel.priority.splice(unpavedIndex + 1, 0, newSemiPavedRule);
+      } else {
+        customModel.priority.push(newSemiPavedRule);
+      }
+    }
+    
+    // Missing surface: strongly reduce
+    const newMissingSurfaceRule = {
+      "if": missingSurface,
+      "multiply_by": 0.3
+    };
+    if (missingSurfaceRuleIndex !== -1) {
+      customModel.priority[missingSurfaceRuleIndex] = newMissingSurfaceRule;
+    } else {
+      const unpavedIndex = customModel.priority.findIndex(
+        r => r.if && (r.if.includes('GRAVEL') || r.if.includes('DIRT'))
+      );
+      if (unpavedIndex !== -1) {
+        customModel.priority.splice(unpavedIndex + 1, 0, newMissingSurfaceRule);
+      } else {
+        customModel.priority.push(newMissingSurfaceRule);
+      }
+    }
+  } else {
+    // Default: slightly reduce unpaved roads
+    const newUnpavedRule = {
+      "if": unpavedSurfaces,
+      "multiply_by": 0.7
+    };
+    if (unpavedRuleIndex !== -1) {
+      customModel.priority[unpavedRuleIndex] = newUnpavedRule;
+    }
+    
+    const newSemiPavedRule = {
+      "if": semiPavedSurfaces,
+      "multiply_by": 0.8
+    };
+    if (semiPavedRuleIndex !== -1) {
+      customModel.priority[semiPavedRuleIndex] = newSemiPavedRule;
+    }
+    
+    const newMissingSurfaceRule = {
+      "if": missingSurface,
+      "multiply_by": 0.6
+    };
+    if (missingSurfaceRuleIndex !== -1) {
+      customModel.priority[missingSurfaceRuleIndex] = newMissingSurfaceRule;
+    }
+  }
+  
+  return customModel;
+}
+
+// Get unpaved roads rule state from custom model
+// Returns true if unpaved roads are strongly avoided, false if slightly reduced
+export function getUnpavedRoadsRule(customModel) {
+  if (!customModel || !customModel.priority) {
+    // Default: slightly reduce (return false)
+    return false;
+  }
+  
+  // Check if unpaved surfaces rule exists and has low multiply_by value
+  const unpavedRule = customModel.priority.find(
+    r => r.if && (r.if.includes('GRAVEL') || r.if.includes('DIRT') || 
+                  r.if.includes('GROUND') || r.if.includes('SAND'))
+  );
+  
+  // If rule exists with multiply_by <= 0.3, unpaved roads are strongly avoided (return true)
+  // If rule exists with multiply_by >= 0.7, unpaved roads are slightly reduced (return false)
+  if (unpavedRule && unpavedRule.multiply_by !== undefined) {
+    return unpavedRule.multiply_by <= 0.3;
+  }
+  
+  // Default: slightly reduce
+  return false;
 }
 

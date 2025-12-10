@@ -1822,6 +1822,55 @@ input[type="range"].slider::-moz-range-thumb,
   transform: translateX(10px) !important;
 }
 
+.unpaved-roads-container {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-secondary);
+}
+
+.unpaved-roads-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.unpaved-roads-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  stroke-width: 2;
+}
+
+.unpaved-roads-text {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  line-height: 1.4;
+  flex: 1;
+}
+
+/* Smaller switch for unpaved roads */
+.unpaved-roads-switch.switch-toggle {
+  width: 24px !important;
+  height: 14px !important;
+  flex-shrink: 0;
+}
+
+.unpaved-roads-switch .switch-slider {
+  border-radius: 14px;
+}
+
+.unpaved-roads-switch .switch-slider:before {
+  height: 10px !important;
+  width: 10px !important;
+  left: 2px !important;
+  bottom: 2px !important;
+}
+
+.unpaved-roads-switch input:checked + .switch-slider:before {
+  transform: translateX(10px) !important;
+}
+
 .mapillary-weight-comparison {
   margin-top: 10px;
   padding-top: 10px;

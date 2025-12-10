@@ -38,6 +38,11 @@ export const routeState = {
   // Default: false (block restricted roads to avoid illegal routes)
   allowCarAccess: false,
   
+  // Unpaved roads setting (for car_customizable profile only)
+  // false = slightly reduce unpaved roads (0.7-0.8), true = strongly avoid them (0.2-0.3)
+  // Default: false (slightly reduce unpaved roads)
+  avoidUnpavedRoads: false,
+  
   // Default custom model (imported from customModel.js)
   // Returns the appropriate default model based on selected profile
   get defaultCustomModel() {
