@@ -47,15 +47,26 @@ missing_mapillary_gh-routing/
 ├── js/
 │   ├── config/                   # Konfiguration
 │   │   ├── config.js             # Lokale Konfiguration (nicht versioniert)
-│   │   └── config.public.js     # Öffentliche Konfiguration
+│   │   └── config.public.js      # Öffentliche Konfiguration
 │   ├── routing/                   # Routing-Module
-│   │   ├── routing.js            # Haupt-Routing-Logik
-│   │   ├── routingUI.js          # UI-Handler
+│   │   ├── routing.js            # Haupt-Routing-Logik & API-Calls
+│   │   ├── routingUI.js          # UI Event Handler Setup
 │   │   ├── routeState.js         # State Management
+│   │   ├── routeRecalculator.js  # Zentrale Route-Recalculations
 │   │   ├── routeVisualization.js # Route-Farben & Hover
+│   │   ├── routeInfoFormatter.js # Route-Info Formatierung
 │   │   ├── colorSchemes.js       # Farb-Schemas
 │   │   ├── customModel.js        # Custom Routing Model
 │   │   ├── gpxExport.js          # GPX-Export
+│   │   ├── waypointOptimizer.js  # Waypoint-Optimierung
+│   │   ├── markers/              # Marker-Management
+│   │   │   ├── markerFactory.js  # Marker-Erstellung (Start, End, Waypoints)
+│   │   │   └── waypointContextMenu.js # Waypoint Context-Menü
+│   │   ├── waypoints/            # Waypoint-Management
+│   │   │   ├── waypointList.js   # Waypoint List UI (Drag & Drop)
+│   │   │   └── waypointManager.js # Waypoint CRUD Operations
+│   │   ├── coordinates/          # Coordinate-Management
+│   │   │   └── coordinateTooltips.js # Tooltip Management
 │   │   └── heightgraph/          # Höhenprofil-Module
 │   │       ├── heightgraph.js
 │   │       ├── heightgraphCanvas.js
@@ -70,12 +81,17 @@ missing_mapillary_gh-routing/
 │   │   ├── bikeLanesLayers.js    # Radinfrastruktur-Layer
 │   │   └── missingStreetsLayers.js # Mapillary Missing Streets Layer
 │   ├── ui/                       # UI-Komponenten
-│   │   ├── setupBaseLayerControls.js
-│   │   ├── panelPositioning.js
-│   │   └── toggleHandlers.js
+│   │   ├── setupBaseLayerControls.js # Basemap Controls
+│   │   ├── panelPositioning.js   # Panel-Positionierung
+│   │   ├── toggleHandlers.js     # Toggle-Handler (Layer, Theme, etc.)
+│   │   ├── contextMenu.js        # Haupt-Context-Menü
+│   │   ├── contextMenuBase.js    # Context-Menü Basis-Utility
+│   │   ├── mapThemeSwitcher.js   # Map Theme Switching
+│   │   └── mapThemeInitializer.js # Map Theme Initialisierung
 │   └── utils/                    # Utilities
 │       ├── permalink.js          # Permalink-Funktionalität
-│       └── geocoder.js           # Geocoding
+│       ├── geocoder.js           # Geocoding
+│       └── constants.js          # Konstanten
 └── thumbs/                       # Thumbnails für Basemaps
 ```
 
