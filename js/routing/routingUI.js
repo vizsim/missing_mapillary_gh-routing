@@ -11,7 +11,9 @@ import {
   updateCarAccessRule,
   getCarAccessRule,
   updateUnpavedRoadsRule,
-  getUnpavedRoadsRule
+  getUnpavedRoadsRule,
+  updateAvoidPushingRule,
+  getAvoidPushingRule
 } from './customModel.js';
 import { setupRoutingInputGeocoder, reverseGeocode } from '../utils/geocoder.js';
 import { ERROR_MESSAGES, MAPILLARY_SLIDER_VALUES } from '../utils/constants.js';
@@ -115,6 +117,14 @@ export function setupUIHandlers(map) {
             routeState.avoidUnpavedRoads
           );
         }
+        
+        // Update avoid pushing rule for bike_customizable profile
+        if (routeState.selectedProfile === 'bike_customizable' && routeState.customModel) {
+          routeState.customModel = updateAvoidPushingRule(
+            routeState.customModel,
+            routeState.avoidPushing
+          );
+        }
       } else {
         // Clear custom model if switching to non-customizable profile
         routeState.customModel = null;
@@ -201,6 +211,28 @@ export function setupUIHandlers(map) {
           }
         } else {
           unpavedRoadsContainer.style.display = 'none';
+        }
+      }
+      
+      // Show/hide avoid pushing switch (only for bike_customizable)
+      const avoidPushingContainer = document.getElementById('avoid-pushing-container');
+      if (avoidPushingContainer) {
+        if (routeState.selectedProfile === 'bike_customizable') {
+          avoidPushingContainer.style.display = 'block';
+          // Initialize switch from routeState
+          const switchInput = document.getElementById('avoid-pushing');
+          if (switchInput) {
+            switchInput.checked = routeState.avoidPushing;
+            // Update custom model based on switch state
+            if (routeState.customModel) {
+              routeState.customModel = updateAvoidPushingRule(
+                routeState.customModel,
+                routeState.avoidPushing
+              );
+            }
+          }
+        } else {
+          avoidPushingContainer.style.display = 'none';
         }
       }
       
@@ -576,6 +608,44 @@ export function setupUIHandlers(map) {
         routeState.customModel = updateUnpavedRoadsRule(
           routeState.customModel,
           avoidUnpavedRoads
+        );
+      }
+      
+      // Recalculate route if ready
+      recalculateRouteIfReady();
+    });
+  }
+  
+  // Avoid pushing switch handler (for bike_customizable profile only)
+  const avoidPushingSwitch = document.getElementById('avoid-pushing');
+  if (avoidPushingSwitch) {
+    avoidPushingSwitch.addEventListener('change', (e) => {
+      if (routeState.selectedProfile !== 'bike_customizable') {
+        return;
+      }
+      
+      const avoidPushing = e.target.checked;
+      routeState.avoidPushing = avoidPushing;
+      
+      // Ensure custom model exists and preserve mapillary weight
+      if (!routeState.customModel) {
+        routeState.customModel = ensureCustomModel(null, routeState.selectedProfile);
+      }
+      
+      // Preserve current mapillary weight before updating
+      const currentMapillaryWeight = getMapillaryPriority(routeState.customModel);
+      
+      // Update custom model
+      routeState.customModel = updateAvoidPushingRule(
+        routeState.customModel,
+        avoidPushing
+      );
+      
+      // Restore mapillary weight if it was set
+      if (currentMapillaryWeight !== null && currentMapillaryWeight !== undefined) {
+        routeState.customModel = updateMapillaryPriority(
+          routeState.customModel,
+          currentMapillaryWeight
         );
       }
       

@@ -1871,6 +1871,55 @@ input[type="range"].slider::-moz-range-thumb,
   transform: translateX(10px) !important;
 }
 
+.avoid-pushing-container {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-secondary);
+}
+
+.avoid-pushing-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avoid-pushing-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  stroke-width: 2;
+}
+
+.avoid-pushing-text {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  line-height: 1.4;
+  flex: 1;
+}
+
+/* Smaller switch for avoid pushing */
+.avoid-pushing-switch.switch-toggle {
+  width: 24px !important;
+  height: 14px !important;
+  flex-shrink: 0;
+}
+
+.avoid-pushing-switch .switch-slider {
+  border-radius: 14px;
+}
+
+.avoid-pushing-switch .switch-slider:before {
+  height: 10px !important;
+  width: 10px !important;
+  left: 2px !important;
+  bottom: 2px !important;
+}
+
+.avoid-pushing-switch input:checked + .switch-slider:before {
+  transform: translateX(10px) !important;
+}
+
 .mapillary-weight-comparison {
   margin-top: 10px;
   padding-top: 10px;

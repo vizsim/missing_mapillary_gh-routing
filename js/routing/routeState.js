@@ -43,6 +43,11 @@ export const routeState = {
   // Default: false (slightly reduce unpaved roads)
   avoidUnpavedRoads: false,
   
+  // Avoid pushing setting (for bike_customizable profile only)
+  // false = no additional penalty, true = strongly avoid routes that require pushing (< 6 km/h)
+  // Default: false (no additional penalty)
+  avoidPushing: false,
+  
   // Default custom model (imported from customModel.js)
   // Returns the appropriate default model based on selected profile
   get defaultCustomModel() {

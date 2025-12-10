@@ -1,6 +1,10 @@
 // Custom Model Management for car_customizable and bike_customizable profiles
 // Handles custom routing models for GraphHopper API
 
+// ============================================================================
+// DEFAULT CUSTOM MODELS
+// ============================================================================
+
 /**
  * Default custom model configuration for car_customizable profile
  * 
@@ -36,27 +40,24 @@ export const defaultCarCustomModel = {
     // Kleine Straßen abwerten (weniger bevorzugt)
     {"if": "road_class==RESIDENTIAL||road_class==LIVING_STREET", "multiply_by": 0.7},
     {"if": "road_class==SERVICE", "multiply_by": 0.5},
-    //{"if": "road_class==TRACK", "multiply_by": 0.4},
+    {"if": "road_class==TRACK", "multiply_by": 0.4},
     
     // Oberflächenbewertung
-    // Befestigte Oberflächen: Keine Reduktion (Standard)
-    // Diese Regel wird dynamisch durch updateUnpavedRoadsRule() angepasst
+    // Diese Regeln werden dynamisch durch updateUnpavedRoadsRule() angepasst
     // Standard: unbefestigte Wege leicht abwerten (0.7-0.8)
     // Wenn "unbefestigte Wege meiden" aktiviert: stark abwerten (0.2-0.3)
     {"if": "surface==GRAVEL||surface==FINE_GRAVEL||surface==DIRT||surface==GROUND||surface==SAND", "multiply_by": 0.7},
     {"if": "surface==PAVING_STONES||surface==COBBLESTONE||surface==COMPACTED", "multiply_by": 0.8},
-    // Wenn surface fehlt: vorsichtig abwerten (könnte unbefestigt sein)
     {"if": "surface==null", "multiply_by": 0.6},
     
-    // Mapillary coverage preference (can be adjusted via slider)
-    // Default: 1.0 (as documented in comments above and defined in constants.js DEFAULTS.MAPILLARY_WEIGHT)
+    // Mapillary coverage preference (anpassbar über Slider)
+    // Default: 1.0 (definiert in constants.js DEFAULTS.MAPILLARY_WEIGHT)
     {"if": "mapillary_coverage==true", "multiply_by": 1.0}
   ],
   "speed": [
     // Basis: eingebaute Autogeschwindigkeit nutzen
     {"if": "true", "limit_to": "car_average_speed"},
-    // Generell um 20% reduzieren (z.B. für realistischere Geschwindigkeiten oder Sicherheitspuffer)
-    {"if": "true", "multiply_by": 0.8},
+    {"if": "true", "multiply_by": 0.8}, // 20% Reduktion für realistischere Geschwindigkeiten
     
     // Access-Logik: Kein Autozugang = sperren
     {"if": "car_access==false", "limit_to": 0},
@@ -80,7 +81,7 @@ export const defaultCarCustomModel = {
  * Default custom model configuration for bike_customizable profile
  * 
  * ZWECK:
- * Dieses Custom Model optimiert Fahrradrouten für Touren-/Alltagsräder basierend auf:
+ * Optimiert Fahrradrouten für Touren-/Alltagsräder basierend auf:
  * - Radinfrastruktur-Qualität (bicycle_infra)
  * - Straßenklassen (road_class) für Wege ohne spezielle Radinfrastruktur
  * - Oberflächenqualität (surface)
@@ -95,14 +96,6 @@ export const defaultCarCustomModel = {
  * 1. Basis: 0.8 (ermöglicht Multiplikatoren > 1.0 ohne über 1.0 zu gehen)
  * 2. Access-Logik: Sperrt unzugängliche Wege
  * 3. Bicycle Infrastructure: Priorisiert Wege basierend auf bicycle_infra (Score 3-10)
- *    - Score 10 (CYCLEWAY_ISOLATED): 1.0 (höchste Priorität)
- *    - Score 9: 0.95
- *    - Score 8: 0.9
- *    - Score 7: 0.85
- *    - Score 6: 0.8
- *    - Score 5: 0.7
- *    - Score 4: 0.6
- *    - Score 3: 0.5
  * 4. Road Class (nur wenn bicycle_infra == NONE): Abwertung von Hauptstraßen
  * 5. Oberflächen: Abwertung von schlechten Oberflächen
  * 6. Mapillary Coverage: Standard 1.0 (anpassbar über Slider)
@@ -130,7 +123,12 @@ export const defaultBikeCustomModel = {
     
     // Access-Logik
     {"if": "!bike_access && (!backward_bike_access || roundabout)", "multiply_by": 0},
+    // Gegen Einbahn/Fußwege gegen Richtung: Diese Regel wird dynamisch durch updateAvoidPushingRule() angepasst
+    // Standard: 0.2 (leicht abwerten), mit "Schieben verhindern": 0.01 (stark abwerten)
     {"else_if": "!bike_access && backward_bike_access && !roundabout", "multiply_by": 0.2},
+    // Fußwege ohne Radinfrastruktur: Diese Regel wird dynamisch durch updateAvoidPushingRule() verwaltet
+    // Standard: 0.2 (leicht abwerten in priority), mit "Schieben verhindern": limit_to: 0 (komplett sperren in speed)
+    // Wichtig: Nur FOOTWAYs ohne bicycle_infra werden behandelt, nicht alle FOOTWAYs
     
     // Bicycle Infrastructure basierte Priorisierung (höchste Qualität zuerst)
     // Score 10: Beste Option, komplett getrennt
@@ -190,13 +188,13 @@ export const defaultBikeCustomModel = {
     {"if": "surface == GROUND || surface == DIRT", "multiply_by": 0.7},
     {"if": "surface == SAND || surface == COBBLESTONE", "multiply_by": 0.4},
     
-    // Mapillary coverage preference (can be adjusted via slider)
-    // Default: 1.0 (as documented in comments above and defined in constants.js DEFAULTS.MAPILLARY_WEIGHT)
+    // Mapillary coverage preference (anpassbar über Slider)
+    // Default: 1.0 (definiert in constants.js DEFAULTS.MAPILLARY_WEIGHT)
     {"if": "mapillary_coverage==true", "multiply_by": 1.0}
   ],
   "speed": [
-    // Basis: eingebaute Fahrradgeschwindigkeit nutzen
-    {"if": "true", "limit_to": "bike_average_speed"},  // auf 25km/h gesettet
+    // Basis: eingebaute Fahrradgeschwindigkeit nutzen (auf 25km/h gesetzt)
+    {"if": "true", "limit_to": "bike_average_speed"},
     
     // Gegen Einbahn -> nur Schrittgeschwindigkeit (Schieben)
     {"if": "!bike_access && backward_bike_access && !roundabout", "limit_to": 5},
@@ -225,21 +223,36 @@ export const defaultBikeCustomModel = {
   ]
 };
 
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
 
-
-// Check if a profile supports custom models
+/**
+ * Check if a profile supports custom models
+ * @param {string} profile - Profile name
+ * @returns {boolean} True if profile supports custom models
+ */
 export function supportsCustomModel(profile) {
   return profile === 'car_customizable' || profile === 'bike_customizable';
 }
 
-// Get the actual GraphHopper profile name (car_customizable -> car, bike_customizable -> bike)
+/**
+ * Get the actual GraphHopper profile name
+ * @param {string} profile - Profile name (car_customizable or bike_customizable)
+ * @returns {string} GraphHopper profile name (car or bike)
+ */
 export function getGraphHopperProfile(profile) {
   if (profile === 'car_customizable') return 'car';
   if (profile === 'bike_customizable') return 'bike';
   return profile;
 }
 
-// Initialize custom model if needed
+/**
+ * Initialize custom model if needed
+ * @param {Object|null} customModel - Existing custom model or null
+ * @param {string} profile - Profile name
+ * @returns {Object} Custom model (default or existing)
+ */
 export function ensureCustomModel(customModel, profile = 'car_customizable') {
   if (!customModel) {
     if (profile === 'bike_customizable') {
@@ -250,21 +263,29 @@ export function ensureCustomModel(customModel, profile = 'car_customizable') {
   return customModel;
 }
 
-// Check if custom model differs from default
-// Compares the entire model structure, which is reliable since models are always created in the same order
+/**
+ * Check if custom model differs from default
+ * @param {Object} customModel - Custom model to check
+ * @param {string} profile - Profile name
+ * @returns {boolean} True if model differs from default
+ */
 export function isDefaultCustomModel(customModel, profile = 'car_customizable') {
   if (!customModel) return false;
   const defaultModel = profile === 'bike_customizable' ? defaultBikeCustomModel : defaultCarCustomModel;
-  // Use JSON.stringify for deep comparison - reliable since models are always created in the same order
   return JSON.stringify(customModel) === JSON.stringify(defaultModel);
 }
 
-// Build POST request body with custom model
-// points: Array of [lng, lat] coordinates
+/**
+ * Build POST request body with custom model
+ * @param {Array<Array<number>>} points - Array of [lng, lat] coordinates
+ * @param {string} profile - Profile name
+ * @param {Object} customModel - Custom model configuration
+ * @returns {Object} Request body for GraphHopper API
+ */
 export function buildPostRequestBodyWithCustomModel(points, profile, customModel) {
   const graphHopperProfile = getGraphHopperProfile(profile);
   const requestBody = {
-    points: points, // Array of [lng, lat] coordinates
+    points: points,
     profile: graphHopperProfile,
     points_encoded: false,
     elevation: true,
@@ -272,25 +293,29 @@ export function buildPostRequestBodyWithCustomModel(points, profile, customModel
     custom_model: customModel
   };
   
-  // Add ch.disable for car profile (LM routing)
-  if (graphHopperProfile === 'car') {
-    requestBody['ch.disable'] = true;
-  }
-  // Add ch.disable for bike profile (LM routing)
-  if (graphHopperProfile === 'bike') {
+  // Add ch.disable for LM routing (car and bike profiles)
+  if (graphHopperProfile === 'car' || graphHopperProfile === 'bike') {
     requestBody['ch.disable'] = true;
   }
   
   return requestBody;
 }
 
-// Update mapillary_coverage multiply_by value in custom model
+// ============================================================================
+// MAPILLARY PRIORITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Update mapillary_coverage multiply_by value in custom model
+ * @param {Object} customModel - Custom model to update
+ * @param {number} multiplyBy - New multiply_by value
+ * @returns {Object} Updated custom model
+ */
 export function updateMapillaryPriority(customModel, multiplyBy) {
   if (!customModel || !customModel.priority) {
     return customModel;
   }
   
-  // Find the mapillary_coverage rule (handle both with and without spaces)
   const mapillaryRule = customModel.priority.find(
     r => r.if && (r.if === 'mapillary_coverage==true' || r.if.includes('mapillary_coverage==true'))
   );
@@ -307,13 +332,16 @@ export function updateMapillaryPriority(customModel, multiplyBy) {
   return customModel;
 }
 
-// Get mapillary_coverage multiply_by value from custom model
+/**
+ * Get mapillary_coverage multiply_by value from custom model
+ * @param {Object} customModel - Custom model to read from
+ * @returns {number|null} Current multiply_by value or null if not found
+ */
 export function getMapillaryPriority(customModel) {
   if (!customModel || !customModel.priority) {
     return null;
   }
   
-  // Find the mapillary_coverage rule (handle both with and without spaces)
   const mapillaryRule = customModel.priority.find(
     r => r.if && (r.if === 'mapillary_coverage==true' || r.if.includes('mapillary_coverage==true'))
   );
@@ -322,7 +350,6 @@ export function getMapillaryPriority(customModel) {
     return null;
   }
   
-  // Convert to number if needed (for backwards compatibility)
   const value = typeof mapillaryRule.multiply_by === 'string' 
     ? parseFloat(mapillaryRule.multiply_by) 
     : mapillaryRule.multiply_by;
@@ -330,14 +357,22 @@ export function getMapillaryPriority(customModel) {
   return isNaN(value) ? null : value;
 }
 
-// Update car access rule in custom model (for car_customizable profile only)
-// allowCarAccess: true = allow restricted roads (DESTINATION, PRIVATE, NO), false = block them (default)
+// ============================================================================
+// CAR ACCESS RULE FUNCTIONS (for car_customizable profile)
+// ============================================================================
+
+/**
+ * Update car access rule in custom model
+ * Controls whether restricted roads (DESTINATION, PRIVATE, NO) are blocked
+ * @param {Object} customModel - Custom model to update
+ * @param {boolean} allowCarAccess - True = allow restricted roads, false = block them (default)
+ * @returns {Object} Updated custom model
+ */
 export function updateCarAccessRule(customModel, allowCarAccess) {
   if (!customModel || !customModel.speed) {
     return customModel;
   }
   
-  // Find the car access rule (check for DESTINATION, PRIVATE, or NO)
   const carAccessRuleIndex = customModel.speed.findIndex(
     r => r.if && (r.if.includes('road_access==DESTINATION') || 
                   r.if.includes('road_access==PRIVATE') || 
@@ -347,7 +382,6 @@ export function updateCarAccessRule(customModel, allowCarAccess) {
   if (carAccessRuleIndex === -1) {
     // Rule doesn't exist, add it if we want to block restricted roads
     if (!allowCarAccess) {
-      // Find position after car_access rule
       const carAccessIndex = customModel.speed.findIndex(
         r => r.if && r.if.includes('car_access==false')
       );
@@ -357,7 +391,6 @@ export function updateCarAccessRule(customModel, allowCarAccess) {
           "limit_to": 0
         });
       } else {
-        // Fallback: add at beginning of speed rules
         customModel.speed.unshift({
           "if": "road_access==DESTINATION||road_access==PRIVATE||road_access==NO",
           "limit_to": 0
@@ -367,10 +400,8 @@ export function updateCarAccessRule(customModel, allowCarAccess) {
   } else {
     // Rule exists, update or remove it
     if (allowCarAccess) {
-      // Remove the rule to allow restricted roads
       customModel.speed.splice(carAccessRuleIndex, 1);
     } else {
-      // Ensure the rule blocks restricted roads
       customModel.speed[carAccessRuleIndex] = {
         "if": "road_access==DESTINATION||road_access==PRIVATE||road_access==NO",
         "limit_to": 0
@@ -381,15 +412,16 @@ export function updateCarAccessRule(customModel, allowCarAccess) {
   return customModel;
 }
 
-// Get car access rule state from custom model
-// Returns true if restricted roads (DESTINATION, PRIVATE, NO) are allowed, false if blocked
+/**
+ * Get car access rule state from custom model
+ * @param {Object} customModel - Custom model to read from
+ * @returns {boolean} True if restricted roads are allowed, false if blocked
+ */
 export function getCarAccessRule(customModel) {
   if (!customModel || !customModel.speed) {
-    // Default: block restricted roads
-    return false;
+    return false; // Default: block restricted roads
   }
   
-  // Check if car access rule exists (check for DESTINATION, PRIVATE, or NO)
   const carAccessRule = customModel.speed.find(
     r => r.if && (r.if.includes('road_access==DESTINATION') || 
                   r.if.includes('road_access==PRIVATE') || 
@@ -401,21 +433,28 @@ export function getCarAccessRule(customModel) {
   return carAccessRule === undefined;
 }
 
-// Update unpaved roads rule in custom model (for car_customizable profile only)
-// avoidUnpavedRoads: true = strongly avoid unpaved roads (0.2-0.3), false = slightly reduce (0.7-0.8, default)
+// ============================================================================
+// UNPAVED ROADS RULE FUNCTIONS (for car_customizable profile)
+// ============================================================================
+
+/**
+ * Update unpaved roads rule in custom model
+ * Controls how strongly unpaved roads are avoided
+ * @param {Object} customModel - Custom model to update
+ * @param {boolean} avoidUnpavedRoads - True = strongly avoid (0.2-0.3), false = slightly reduce (0.7-0.8, default)
+ * @returns {Object} Updated custom model
+ */
 export function updateUnpavedRoadsRule(customModel, avoidUnpavedRoads) {
   if (!customModel || !customModel.priority) {
     return customModel;
   }
   
-  // Unbefestigte Oberflächen (nur gültige GraphHopper Surface-Werte)
+  // Surface type definitions (only valid GraphHopper Surface values)
   const unpavedSurfaces = "surface==GRAVEL||surface==FINE_GRAVEL||surface==DIRT||surface==GROUND||surface==SAND";
-  // Halbwegs befestigt
   const semiPavedSurfaces = "surface==PAVING_STONES||surface==COBBLESTONE||surface==COMPACTED";
-  // Wenn surface fehlt
   const missingSurface = "surface==null";
   
-  // Find existing unpaved roads rules
+  // Find existing rules
   const unpavedRuleIndex = customModel.priority.findIndex(
     r => r.if && (r.if.includes('GRAVEL') || r.if.includes('DIRT') || 
                   r.if.includes('GROUND') || r.if.includes('SAND'))
@@ -428,17 +467,12 @@ export function updateUnpavedRoadsRule(customModel, avoidUnpavedRoads) {
     r => r.if && r.if.includes('surface==null')
   );
   
-  // Update or add unpaved surfaces rule
   if (avoidUnpavedRoads) {
     // Strongly avoid unpaved roads
-    const newUnpavedRule = {
-      "if": unpavedSurfaces,
-      "multiply_by": 0.25
-    };
+    const newUnpavedRule = {"if": unpavedSurfaces, "multiply_by": 0.25};
     if (unpavedRuleIndex !== -1) {
       customModel.priority[unpavedRuleIndex] = newUnpavedRule;
     } else {
-      // Find position after road_class rules, before mapillary
       const mapillaryIndex = customModel.priority.findIndex(
         r => r.if && r.if.includes('mapillary_coverage')
       );
@@ -449,11 +483,7 @@ export function updateUnpavedRoadsRule(customModel, avoidUnpavedRoads) {
       }
     }
     
-    // Semi-paved: reduce more
-    const newSemiPavedRule = {
-      "if": semiPavedSurfaces,
-      "multiply_by": 0.5
-    };
+    const newSemiPavedRule = {"if": semiPavedSurfaces, "multiply_by": 0.5};
     if (semiPavedRuleIndex !== -1) {
       customModel.priority[semiPavedRuleIndex] = newSemiPavedRule;
     } else {
@@ -467,11 +497,7 @@ export function updateUnpavedRoadsRule(customModel, avoidUnpavedRoads) {
       }
     }
     
-    // Missing surface: strongly reduce
-    const newMissingSurfaceRule = {
-      "if": missingSurface,
-      "multiply_by": 0.3
-    };
+    const newMissingSurfaceRule = {"if": missingSurface, "multiply_by": 0.3};
     if (missingSurfaceRuleIndex !== -1) {
       customModel.priority[missingSurfaceRuleIndex] = newMissingSurfaceRule;
     } else {
@@ -486,55 +512,170 @@ export function updateUnpavedRoadsRule(customModel, avoidUnpavedRoads) {
     }
   } else {
     // Default: slightly reduce unpaved roads
-    const newUnpavedRule = {
-      "if": unpavedSurfaces,
-      "multiply_by": 0.7
-    };
     if (unpavedRuleIndex !== -1) {
-      customModel.priority[unpavedRuleIndex] = newUnpavedRule;
+      customModel.priority[unpavedRuleIndex] = {"if": unpavedSurfaces, "multiply_by": 0.7};
     }
-    
-    const newSemiPavedRule = {
-      "if": semiPavedSurfaces,
-      "multiply_by": 0.8
-    };
     if (semiPavedRuleIndex !== -1) {
-      customModel.priority[semiPavedRuleIndex] = newSemiPavedRule;
+      customModel.priority[semiPavedRuleIndex] = {"if": semiPavedSurfaces, "multiply_by": 0.8};
     }
-    
-    const newMissingSurfaceRule = {
-      "if": missingSurface,
-      "multiply_by": 0.6
-    };
     if (missingSurfaceRuleIndex !== -1) {
-      customModel.priority[missingSurfaceRuleIndex] = newMissingSurfaceRule;
+      customModel.priority[missingSurfaceRuleIndex] = {"if": missingSurface, "multiply_by": 0.6};
     }
   }
   
   return customModel;
 }
 
-// Get unpaved roads rule state from custom model
-// Returns true if unpaved roads are strongly avoided, false if slightly reduced
+/**
+ * Get unpaved roads rule state from custom model
+ * @param {Object} customModel - Custom model to read from
+ * @returns {boolean} True if unpaved roads are strongly avoided, false if slightly reduced
+ */
 export function getUnpavedRoadsRule(customModel) {
   if (!customModel || !customModel.priority) {
-    // Default: slightly reduce (return false)
-    return false;
+    return false; // Default: slightly reduce
   }
   
-  // Check if unpaved surfaces rule exists and has low multiply_by value
   const unpavedRule = customModel.priority.find(
     r => r.if && (r.if.includes('GRAVEL') || r.if.includes('DIRT') || 
                   r.if.includes('GROUND') || r.if.includes('SAND'))
   );
   
-  // If rule exists with multiply_by <= 0.3, unpaved roads are strongly avoided (return true)
-  // If rule exists with multiply_by >= 0.7, unpaved roads are slightly reduced (return false)
   if (unpavedRule && unpavedRule.multiply_by !== undefined) {
     return unpavedRule.multiply_by <= 0.3;
   }
   
-  // Default: slightly reduce
-  return false;
+  return false; // Default: slightly reduce
 }
 
+// ============================================================================
+// AVOID PUSHING RULE FUNCTIONS (for bike_customizable profile)
+// ============================================================================
+
+/**
+ * Update avoid pushing rule in custom model
+ * Controls whether routes that require pushing are blocked
+ * - Blocks: road_class==FOOTWAY && bicycle_infra==NONE (via speed limit_to: 0)
+ * - Strongly avoids: !bike_access && backward_bike_access (via priority multiply_by: 0.01)
+ * @param {Object} customModel - Custom model to update
+ * @param {boolean} avoidPushing - True = completely block, false = slightly allow (default)
+ * @returns {Object} Updated custom model
+ */
+export function updateAvoidPushingRule(customModel, avoidPushing) {
+  if (!customModel || !customModel.priority || !customModel.speed) {
+    return customModel;
+  }
+  
+  // Find existing rules
+  const againstDirectionIndex = customModel.priority.findIndex(
+    r => r.if && r.if.includes('!bike_access && backward_bike_access')
+  );
+  const footwayNoInfraIndex = customModel.priority.findIndex(
+    r => r.if && r.if.includes('road_class == FOOTWAY') && r.if.includes('bicycle_infra == NONE')
+  );
+  const footwayNoInfraSpeedIndex = customModel.speed.findIndex(
+    r => r.if && r.if.includes('road_class == FOOTWAY') && r.if.includes('bicycle_infra == NONE')
+  );
+  
+  if (avoidPushing) {
+    // Strongly avoid routes that require pushing (gegen Einbahn/Fußwege) - priority only
+    if (againstDirectionIndex !== -1) {
+      customModel.priority[againstDirectionIndex] = {
+        "if": "!bike_access && backward_bike_access && !roundabout",
+        "multiply_by": 0.01
+      };
+    }
+    
+    // Completely block footways without bicycle infrastructure - use speed section with limit_to: 0
+    if (footwayNoInfraSpeedIndex !== -1) {
+      customModel.speed[footwayNoInfraSpeedIndex] = {
+        "if": "road_class == FOOTWAY && bicycle_infra == NONE",
+        "limit_to": 0
+      };
+    } else {
+      const bikeAccessIndex = customModel.speed.findIndex(
+        r => r.if && r.if.includes('bike_access==false')
+      );
+      if (bikeAccessIndex !== -1) {
+        customModel.speed.splice(bikeAccessIndex + 1, 0, {
+          "if": "road_class == FOOTWAY && bicycle_infra == NONE",
+          "limit_to": 0
+        });
+      } else {
+        customModel.speed.unshift({
+          "if": "road_class == FOOTWAY && bicycle_infra == NONE",
+          "limit_to": 0
+        });
+      }
+    }
+    
+    // Remove priority rule for footways (speed rule is sufficient for blocking)
+    if (footwayNoInfraIndex !== -1) {
+      customModel.priority.splice(footwayNoInfraIndex, 1);
+    }
+  } else {
+    // Default: slightly allow (but still reduce priority)
+    if (againstDirectionIndex !== -1) {
+      customModel.priority[againstDirectionIndex] = {
+        "if": "!bike_access && backward_bike_access && !roundabout",
+        "multiply_by": 0.2
+      };
+    }
+    
+    // Remove speed rule to allow footways without bicycle infrastructure
+    if (footwayNoInfraSpeedIndex !== -1) {
+      customModel.speed.splice(footwayNoInfraSpeedIndex, 1);
+    }
+    
+    // Add priority rule back (slightly reduce priority, but don't block)
+    if (footwayNoInfraIndex === -1) {
+      const mapillaryIndex = customModel.priority.findIndex(
+        r => r.if && r.if.includes('mapillary_coverage')
+      );
+      const insertPosition = mapillaryIndex !== -1 ? mapillaryIndex : customModel.priority.length;
+      customModel.priority.splice(insertPosition, 0, {
+        "if": "road_class == FOOTWAY && bicycle_infra == NONE",
+        "multiply_by": 0.2
+      });
+    } else {
+      customModel.priority[footwayNoInfraIndex] = {
+        "if": "road_class == FOOTWAY && bicycle_infra == NONE",
+        "multiply_by": 0.2
+      };
+    }
+  }
+  
+  return customModel;
+}
+
+/**
+ * Get avoid pushing rule state from custom model
+ * @param {Object} customModel - Custom model to read from
+ * @returns {boolean} True if pushing is strongly avoided, false if slightly allowed
+ */
+export function getAvoidPushingRule(customModel) {
+  if (!customModel || !customModel.priority) {
+    return false; // Default: slightly allow
+  }
+  
+  const againstDirectionRule = customModel.priority.find(
+    r => r.if && r.if.includes('!bike_access && backward_bike_access')
+  );
+  const footwayNoInfraRule = customModel.priority.find(
+    r => r.if && r.if.includes('road_class == FOOTWAY') && r.if.includes('bicycle_infra == NONE')
+  );
+  
+  const againstDirectionStronglyAvoided = againstDirectionRule && 
+    againstDirectionRule.multiply_by !== undefined && 
+    againstDirectionRule.multiply_by <= 0.01;
+  const footwayNoInfraStronglyAvoided = footwayNoInfraRule && 
+    footwayNoInfraRule.multiply_by !== undefined && 
+    footwayNoInfraRule.multiply_by <= 0.01;
+  
+  // Also check if speed rule exists (which means pushing is blocked)
+  const footwayNoInfraSpeedRule = customModel.speed && customModel.speed.find(
+    r => r.if && r.if.includes('road_class == FOOTWAY') && r.if.includes('bicycle_infra == NONE')
+  );
+  
+  return againstDirectionStronglyAvoided || footwayNoInfraStronglyAvoided || !!footwayNoInfraSpeedRule;
+}

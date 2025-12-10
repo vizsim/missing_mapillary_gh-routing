@@ -12,6 +12,7 @@ import {
   updateMapillaryPriority,
   updateCarAccessRule,
   updateUnpavedRoadsRule,
+  updateAvoidPushingRule,
   defaultCarCustomModel,
   defaultBikeCustomModel
 } from '../routing/customModel.js';
@@ -176,6 +177,11 @@ export class Permalink {
       // Unpaved roads (only for car_customizable, only if enabled)
       if (routeState.selectedProfile === 'car_customizable' && routeState.avoidUnpavedRoads) {
         paramParts.push('avoidUnpavedRoads=1');
+      }
+      
+      // Avoid pushing (only for bike_customizable, only if enabled)
+      if (routeState.selectedProfile === 'bike_customizable' && routeState.avoidPushing) {
+        paramParts.push('avoidPushing=1');
       }
     }
     
@@ -430,6 +436,23 @@ export class Permalink {
       );
     }
     
+    // Load avoid pushing setting (for bike_customizable profile only)
+    const avoidPushingParam = params.get('avoidPushing');
+    if (avoidPushingParam === '1' || avoidPushingParam === 'true') {
+      routeState.avoidPushing = true;
+    } else {
+      // Default: false (no additional penalty)
+      routeState.avoidPushing = false;
+    }
+    
+    // Update custom model with avoid pushing rule
+    if (routeState.selectedProfile === 'bike_customizable' && routeState.customModel) {
+      routeState.customModel = updateAvoidPushingRule(
+        routeState.customModel,
+        routeState.avoidPushing
+      );
+    }
+    
     // Initialize slider and car access switch if customizable profile is selected
     if (supportsCustomModel(routeState.selectedProfile)) {
       // Wait a bit for UI to be ready
@@ -480,6 +503,16 @@ export class Permalink {
             if (unpavedRoadsContainer && unpavedRoadsSwitch) {
               unpavedRoadsContainer.style.display = 'block';
               unpavedRoadsSwitch.checked = routeState.avoidUnpavedRoads;
+            }
+          }
+          
+          // Initialize avoid pushing switch for bike_customizable
+          if (routeState.selectedProfile === 'bike_customizable') {
+            const avoidPushingContainer = document.getElementById('avoid-pushing-container');
+            const avoidPushingSwitch = document.getElementById('avoid-pushing');
+            if (avoidPushingContainer && avoidPushingSwitch) {
+              avoidPushingContainer.style.display = 'block';
+              avoidPushingSwitch.checked = routeState.avoidPushing;
             }
           }
         }
@@ -679,6 +712,11 @@ export class Permalink {
       // Unpaved roads (only for car_customizable, only if enabled)
       if (routeState.selectedProfile === 'car_customizable' && routeState.avoidUnpavedRoads) {
         paramParts.push('avoidUnpavedRoads=1');
+      }
+      
+      // Avoid pushing (only for bike_customizable, only if enabled)
+      if (routeState.selectedProfile === 'bike_customizable' && routeState.avoidPushing) {
+        paramParts.push('avoidPushing=1');
       }
     }
     

@@ -13,7 +13,8 @@ import {
   getMapillaryPriority,
   updateMapillaryPriority,
   updateCarAccessRule,
-  updateUnpavedRoadsRule
+  updateUnpavedRoadsRule,
+  updateAvoidPushingRule
 } from './customModel.js';
 import { calculateDistance } from './heightgraph/heightgraphUtils.js';
 import { optimizeWaypoints } from './waypointOptimizer.js';
@@ -711,6 +712,14 @@ export async function calculateRoute(map, start, end, waypoints = []) {
         routeState.customModel = updateUnpavedRoadsRule(
           routeState.customModel,
           routeState.avoidUnpavedRoads
+        );
+      }
+      
+      // Update avoid pushing rule for bike_customizable profile
+      if (routeState.selectedProfile === 'bike_customizable' && routeState.customModel) {
+        routeState.customModel = updateAvoidPushingRule(
+          routeState.customModel,
+          routeState.avoidPushing
         );
       }
     }
