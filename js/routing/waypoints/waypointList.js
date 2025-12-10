@@ -42,6 +42,162 @@ function createWaypointItemHTML(index, waypoint) {
   `;
 }
 
+// Global state for touch-based dragging
+let touchDragState = {
+  isDragging: false,
+  draggedItem: null,
+  draggedIndex: null,
+  startY: null,
+  currentY: null
+};
+
+// Global touch move handler (only one instance needed)
+let globalTouchMoveHandler = null;
+
+/**
+ * Setup global touch move handler (called once)
+ */
+function setupGlobalTouchMoveHandler() {
+  if (globalTouchMoveHandler) return; // Already set up
+  
+  globalTouchMoveHandler = (e) => {
+    if (!touchDragState.isDragging || !touchDragState.draggedItem) return;
+    
+    const touch = e.touches[0];
+    if (!touch) return;
+    
+    touchDragState.currentY = touch.clientY;
+    
+    // Find element under touch point
+    const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (!elementBelow) return;
+    
+    // Find the waypoint item (might be a child element)
+    const targetItem = elementBelow.closest('.waypoint-item');
+    if (!targetItem || targetItem === touchDragState.draggedItem || targetItem.classList.contains('dragging')) {
+      // Remove indicators from all items
+      document.querySelectorAll('.waypoint-item').forEach(el => {
+        if (el !== touchDragState.draggedItem) {
+          el.classList.remove('drag-over', 'drag-over-before', 'drag-over-after');
+        }
+      });
+      return;
+    }
+    
+    // Update drag-over indicator
+    updateDragOverIndicator(targetItem, touch.clientY);
+    
+    // Remove indicators from other items
+    document.querySelectorAll('.waypoint-item').forEach(el => {
+      if (el !== touchDragState.draggedItem && el !== targetItem) {
+        el.classList.remove('drag-over', 'drag-over-before', 'drag-over-after');
+      }
+    });
+    
+    e.preventDefault();
+  };
+  
+  document.addEventListener('touchmove', globalTouchMoveHandler, { passive: false });
+}
+
+/**
+ * Setup touch-based drag handlers for mobile devices
+ * @param {HTMLElement} item - The waypoint item element
+ * @param {number} index - Waypoint index
+ * @param {HTMLElement} waypointsList - Container element
+ */
+function setupWaypointTouchHandlers(item, index, waypointsList) {
+  const removeBtn = item.querySelector('.btn-remove-waypoint');
+  
+  // Touch start
+  item.addEventListener('touchstart', (e) => {
+    // Don't start drag if touching remove button
+    if (removeBtn && (e.target === removeBtn || removeBtn.contains(e.target))) {
+      return;
+    }
+    
+    // Only start drag if touching the drag handle or the item itself (not buttons)
+    const touch = e.touches[0];
+    if (!touch) return;
+    
+    const target = e.target;
+    if (target === removeBtn || removeBtn?.contains(target)) {
+      return;
+    }
+    
+    touchDragState.isDragging = true;
+    touchDragState.draggedItem = item;
+    touchDragState.draggedIndex = index;
+    touchDragState.startY = touch.clientY;
+    touchDragState.currentY = touch.clientY;
+    
+    item.classList.add('dragging');
+    
+    // Prevent scrolling while dragging
+    e.preventDefault();
+  }, { passive: false });
+  
+  // Setup global touch move handler if not already done
+  setupGlobalTouchMoveHandler();
+  
+  // Touch end
+  const handleTouchEnd = (e) => {
+    if (!touchDragState.isDragging || touchDragState.draggedItem !== item) return;
+    
+    const touch = e.changedTouches[0];
+    if (!touch) {
+      // Cleanup even without touch data
+      cleanupTouchDrag();
+      return;
+    }
+    
+    // Find drop target
+    const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (elementBelow) {
+      const dropTarget = elementBelow.closest('.waypoint-item');
+      
+      if (dropTarget && dropTarget !== item) {
+        const dropIndex = parseInt(dropTarget.dataset.index, 10);
+        const draggedIndex = touchDragState.draggedIndex;
+        
+        if (!isNaN(dropIndex) && !isNaN(draggedIndex) && draggedIndex !== dropIndex) {
+          reorderWaypoint(draggedIndex, dropIndex, touch.clientY, dropTarget);
+        }
+      }
+    }
+    
+    cleanupTouchDrag();
+    e.preventDefault();
+  };
+  
+  item.addEventListener('touchend', handleTouchEnd, { passive: false });
+  item.addEventListener('touchcancel', cleanupTouchDrag, { passive: false });
+}
+
+/**
+ * Cleanup touch drag state
+ */
+function cleanupTouchDrag() {
+  if (touchDragState.draggedItem) {
+    touchDragState.draggedItem.classList.remove('dragging');
+  }
+  
+  // Remove all drop indicators
+  document.querySelectorAll('.waypoint-item').forEach(el => {
+    el.classList.remove('drag-over', 'drag-over-before', 'drag-over-after');
+  });
+  
+  // Reset state
+  touchDragState.isDragging = false;
+  touchDragState.draggedItem = null;
+  touchDragState.draggedIndex = null;
+  touchDragState.startY = null;
+  touchDragState.currentY = null;
+  
+  // Update UI and recalculate route
+  handleWaypointsReordered();
+}
+
 /**
  * Setup drag & drop event handlers for a waypoint item
  * @param {HTMLElement} item - The waypoint item element
@@ -171,6 +327,13 @@ function setupWaypointRemoveHandler(item, index) {
     e.stopPropagation();
     removeWaypoint(index);
   });
+  
+  // Touch support for remove button
+  removeBtn.addEventListener('touchend', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    removeWaypoint(index);
+  });
 }
 
 /**
@@ -273,6 +436,7 @@ export function updateWaypointsList() {
     
     // Setup event handlers
     setupWaypointDragHandlers(item, index, waypointsList);
+    setupWaypointTouchHandlers(item, index, waypointsList);
     setupWaypointRemoveHandler(item, index);
   });
   
