@@ -22,13 +22,13 @@ export const ROUTE_CALCULATION = {
 };
 
 // Mapillary slider values
-export const MAPILLARY_SLIDER_VALUES = [0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.6, 1.0];
+export const MAPILLARY_SLIDER_VALUES = [0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.6, 0.8, 1.0];
 
 // Default values
 export const DEFAULTS = {
   PROFILE: 'bike_customizable',
   ENCODED_TYPE: 'mapillary_coverage',
-  MAPILLARY_WEIGHT: 0.1
+  MAPILLARY_WEIGHT: 1.0
 };
 
 // Coordinate validation

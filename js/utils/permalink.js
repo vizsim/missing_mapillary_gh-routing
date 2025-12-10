@@ -9,7 +9,9 @@ import {
   ensureCustomModel,
   isDefaultCustomModel,
   getMapillaryPriority,
-  updateMapillaryPriority
+  updateMapillaryPriority,
+  defaultCarCustomModel,
+  defaultBikeCustomModel
 } from '../routing/customModel.js';
 import { MAPILLARY_SLIDER_VALUES, PERMALINK as PERMALINK_CONFIG } from './constants.js';
 
@@ -144,18 +146,22 @@ export class Permalink {
       paramParts.push(`waypoint=${Math.round(lat * 10000) / 10000}/${Math.round(lng * 10000) / 10000}`);
     });
     
-    // Profile
-    if (routeState.selectedProfile && routeState.selectedProfile !== 'car_customizable') {
+    // Profile - include all profiles including car_customizable
+    if (routeState.selectedProfile) {
       paramParts.push(`profile=${encodeURIComponent(routeState.selectedProfile)}`);
     }
     
-    // Custom model (for car_customizable profile)
+    // Custom model (for customizable profiles)
     // Only include mapillary_weight in URL if it differs from the default
     if (supportsCustomModel(routeState.selectedProfile) && routeState.customModel) {
       const currentWeight = getMapillaryPriority(routeState.customModel);
-      const defaultWeight = getMapillaryPriority(routeState.defaultCustomModel);
+      // Get the correct default model for the selected profile
+      const defaultModel = routeState.selectedProfile === 'bike_customizable' 
+        ? defaultBikeCustomModel 
+        : defaultCarCustomModel;
+      const defaultWeight = getMapillaryPriority(defaultModel);
       
-      // Only add to URL if it differs from the default (0.1)
+      // Only add to URL if it differs from the default
       if (currentWeight !== null && currentWeight !== undefined && currentWeight !== defaultWeight) {
         paramParts.push(`mapillary_weight=${currentWeight.toString()}`);
       }
@@ -318,13 +324,16 @@ export class Permalink {
     // Determine which profile to use
     let selectedProfile = 'bike_customizable'; // default
     if (profileParam) {
+      // Support legacy 'car' profile parameter (for backwards compatibility)
       if (profileParam === 'car' && (mapillaryWeightParam || customModelParam)) {
         selectedProfile = 'car_customizable';
       } else {
         selectedProfile = profileParam;
       }
     } else if (mapillaryWeightParam || customModelParam) {
-      selectedProfile = 'bike_customizable';
+      // If mapillary_weight is present but no profile, default to car_customizable (Auto)
+      // This handles URLs that were created before profile was saved
+      selectedProfile = 'car_customizable';
     }
     
     if (mapillaryWeightParam) {
@@ -570,17 +579,22 @@ export class Permalink {
       paramParts.push(`waypoint=${Math.round(lat * 10000) / 10000}/${Math.round(lng * 10000) / 10000}`);
     });
     
-    if (routeState.selectedProfile && routeState.selectedProfile !== 'car_customizable') {
+    // Profile - include all profiles including car_customizable
+    if (routeState.selectedProfile) {
       paramParts.push(`profile=${encodeURIComponent(routeState.selectedProfile)}`);
     }
     
-    // Custom model (for car_customizable profile)
+    // Custom model (for customizable profiles)
     // Only include mapillary_weight in URL if it differs from the default
-    if (routeState.selectedProfile === 'car_customizable' && routeState.customModel) {
+    if (supportsCustomModel(routeState.selectedProfile) && routeState.customModel) {
       const currentWeight = getMapillaryPriority(routeState.customModel);
-      const defaultWeight = getMapillaryPriority(routeState.defaultCustomModel);
+      // Get the correct default model for the selected profile
+      const defaultModel = routeState.selectedProfile === 'bike_customizable' 
+        ? defaultBikeCustomModel 
+        : defaultCarCustomModel;
+      const defaultWeight = getMapillaryPriority(defaultModel);
       
-      // Only add to URL if it differs from the default (0.1)
+      // Only add to URL if it differs from the default
       if (currentWeight !== null && currentWeight !== undefined && currentWeight !== defaultWeight) {
         paramParts.push(`mapillary_weight=${currentWeight.toString()}`);
       }

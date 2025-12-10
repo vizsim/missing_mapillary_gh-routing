@@ -76,13 +76,28 @@ export function setupUIHandlers(map) {
       document.querySelectorAll('.profile-btn').forEach(b => b.classList.remove('active'));
       // Add active class to clicked button
       btn.classList.add('active');
+      // Store current mapillary_weight before switching profiles
+      const previousProfile = routeState.selectedProfile;
+      const previousMapillaryWeight = supportsCustomModel(previousProfile) && routeState.customModel
+        ? getMapillaryPriority(routeState.customModel)
+        : null;
+      
       // Update selected profile
       routeState.selectedProfile = btn.dataset.profile;
       
       // Reset and set default custom model if customizable profile is selected
       if (supportsCustomModel(routeState.selectedProfile)) {
-        routeState.customModel = null; // Reset to ensure correct model is loaded
-        routeState.customModel = ensureCustomModel(routeState.customModel, routeState.selectedProfile);
+        // If switching between customizable profiles, preserve mapillary_weight
+        if (supportsCustomModel(previousProfile) && previousMapillaryWeight !== null) {
+          // Initialize with default model first
+          routeState.customModel = ensureCustomModel(null, routeState.selectedProfile);
+          // Then restore the mapillary_weight value
+          routeState.customModel = updateMapillaryPriority(routeState.customModel, previousMapillaryWeight);
+        } else {
+          // Switching from non-customizable profile or no previous weight, use default
+          routeState.customModel = null;
+          routeState.customModel = ensureCustomModel(routeState.customModel, routeState.selectedProfile);
+        }
       } else {
         // Clear custom model if switching to non-customizable profile
         routeState.customModel = null;
@@ -296,9 +311,10 @@ export function setupUIHandlers(map) {
   // Use predefined slider values from constants
   const sliderValues = MAPILLARY_SLIDER_VALUES;
   
-  // Helper functions to convert between slider index (0-9) and actual value
+  // Helper functions to convert between slider index (0-10) and actual value
   const sliderIndexToValue = (index) => {
-    const clampedIndex = Math.max(0, Math.min(9, Math.round(index)));
+    const maxIndex = sliderValues.length - 1;
+    const clampedIndex = Math.max(0, Math.min(maxIndex, Math.round(index)));
     return sliderValues[clampedIndex];
   };
   

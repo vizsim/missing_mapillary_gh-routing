@@ -1,7 +1,7 @@
 // Route State Management
 // Centralized state management for routing functionality
 
-import { defaultCustomModel } from './customModel.js';
+import { defaultCarCustomModel, defaultBikeCustomModel } from './customModel.js';
 
 export const routeState = {
   // Map instance
@@ -34,8 +34,11 @@ export const routeState = {
   customModel: null,
   
   // Default custom model (imported from customModel.js)
+  // Returns the appropriate default model based on selected profile
   get defaultCustomModel() {
-    return defaultCustomModel;
+    return this.selectedProfile === 'bike_customizable' 
+      ? defaultBikeCustomModel 
+      : defaultCarCustomModel;
   },
   
   // Route data

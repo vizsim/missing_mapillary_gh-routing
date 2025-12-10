@@ -16,9 +16,9 @@
  * - Hauptstraßen bevorzugen (MOTORWAY, TRUNK, PRIMARY)
  * - Kleine Straßen abwerten (RESIDENTIAL, LIVING_STREET)
  * - Schlechte Oberflächen abwerten
- * - Mapillary Coverage bevorzugen (Standard 0.1, anpassbar)
+ * - Mapillary Coverage bevorzugen (Standard 1.0, anpassbar)
  */
-export const defaultCustomModel = {
+export const defaultCarCustomModel = {
   "distance_influence": 90,
   "priority": [
     // Basis: Keine Reduktion
@@ -42,7 +42,8 @@ export const defaultCustomModel = {
     {"if": "surface==COBBLESTONE", "multiply_by": 0.9},
     
     // Mapillary coverage preference (can be adjusted via slider)
-    {"if": "mapillary_coverage==true", "multiply_by": 1}
+    // Default: 1.0 (as documented in comments above and defined in constants.js DEFAULTS.MAPILLARY_WEIGHT)
+    {"if": "mapillary_coverage==true", "multiply_by": 1.0}
   ],
   "speed": [
     // Basis: eingebaute Autogeschwindigkeit nutzen
@@ -92,7 +93,7 @@ export const defaultCustomModel = {
  *    - Score 3: 0.5
  * 4. Road Class (nur wenn bicycle_infra == NONE): Abwertung von Hauptstraßen
  * 5. Oberflächen: Abwertung von schlechten Oberflächen
- * 6. Mapillary Coverage: Standard 0.1 (anpassbar über Slider)
+ * 6. Mapillary Coverage: Standard 1.0 (anpassbar über Slider)
  * 
  * SPEED-REGELN:
  * - Basis: bike_average_speed (25 km/h, in GraphHopper-Konfiguration gesetzt)
@@ -178,7 +179,8 @@ export const defaultBikeCustomModel = {
     {"if": "surface == SAND || surface == COBBLESTONE", "multiply_by": 0.4},
     
     // Mapillary coverage preference (can be adjusted via slider)
-    {"if": "mapillary_coverage==true", "multiply_by": 1}
+    // Default: 1.0 (as documented in comments above and defined in constants.js DEFAULTS.MAPILLARY_WEIGHT)
+    {"if": "mapillary_coverage==true", "multiply_by": 1.0}
   ],
   "speed": [
     // Basis: eingebaute Fahrradgeschwindigkeit nutzen
@@ -231,14 +233,17 @@ export function ensureCustomModel(customModel, profile = 'car_customizable') {
     if (profile === 'bike_customizable') {
       return JSON.parse(JSON.stringify(defaultBikeCustomModel));
     }
-    return JSON.parse(JSON.stringify(defaultCustomModel));
+    return JSON.parse(JSON.stringify(defaultCarCustomModel));
   }
   return customModel;
 }
 
 // Check if custom model differs from default
+// Compares the entire model structure, which is reliable since models are always created in the same order
 export function isDefaultCustomModel(customModel, profile = 'car_customizable') {
-  const defaultModel = profile === 'bike_customizable' ? defaultBikeCustomModel : defaultCustomModel;
+  if (!customModel) return false;
+  const defaultModel = profile === 'bike_customizable' ? defaultBikeCustomModel : defaultCarCustomModel;
+  // Use JSON.stringify for deep comparison - reliable since models are always created in the same order
   return JSON.stringify(customModel) === JSON.stringify(defaultModel);
 }
 
@@ -273,8 +278,9 @@ export function updateMapillaryPriority(customModel, multiplyBy) {
     return customModel;
   }
   
+  // Find the mapillary_coverage rule (handle both with and without spaces)
   const mapillaryRule = customModel.priority.find(
-    r => r.if && r.if.includes('mapillary_coverage==true')
+    r => r.if && (r.if === 'mapillary_coverage==true' || r.if.includes('mapillary_coverage==true'))
   );
   
   if (mapillaryRule) {
@@ -295,8 +301,9 @@ export function getMapillaryPriority(customModel) {
     return null;
   }
   
+  // Find the mapillary_coverage rule (handle both with and without spaces)
   const mapillaryRule = customModel.priority.find(
-    r => r.if && r.if.includes('mapillary_coverage==true')
+    r => r.if && (r.if === 'mapillary_coverage==true' || r.if.includes('mapillary_coverage==true'))
   );
   
   if (!mapillaryRule || mapillaryRule.multiply_by === undefined) {
