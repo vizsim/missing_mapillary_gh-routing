@@ -7,7 +7,9 @@ import {
   supportsCustomModel,
   ensureCustomModel,
   getMapillaryPriority,
-  updateMapillaryPriority
+  updateMapillaryPriority,
+  updateCarAccessRule,
+  getCarAccessRule
 } from './customModel.js';
 import { setupRoutingInputGeocoder, reverseGeocode } from '../utils/geocoder.js';
 import { ERROR_MESSAGES, MAPILLARY_SLIDER_VALUES } from '../utils/constants.js';
@@ -98,6 +100,14 @@ export function setupUIHandlers(map) {
           routeState.customModel = null;
           routeState.customModel = ensureCustomModel(routeState.customModel, routeState.selectedProfile);
         }
+        
+        // Update car access rule for car_customizable profile
+        if (routeState.selectedProfile === 'car_customizable' && routeState.customModel) {
+          routeState.customModel = updateCarAccessRule(
+            routeState.customModel,
+            routeState.allowCarAccess
+          );
+        }
       } else {
         // Clear custom model if switching to non-customizable profile
         routeState.customModel = null;
@@ -140,6 +150,28 @@ export function setupUIHandlers(map) {
           }
         } else {
           sliderContainer.style.display = 'none';
+        }
+      }
+      
+      // Show/hide car access switch (only for car_customizable)
+      const carAccessContainer = document.getElementById('car-access-container');
+      if (carAccessContainer) {
+        if (routeState.selectedProfile === 'car_customizable') {
+          carAccessContainer.style.display = 'block';
+          // Initialize switch from routeState
+          const switchInput = document.getElementById('allow-car-access');
+          if (switchInput) {
+            switchInput.checked = routeState.allowCarAccess;
+            // Update custom model based on switch state
+            if (routeState.customModel) {
+              routeState.customModel = updateCarAccessRule(
+                routeState.customModel,
+                routeState.allowCarAccess
+              );
+            }
+          }
+        } else {
+          carAccessContainer.style.display = 'none';
         }
       }
       
@@ -472,6 +504,30 @@ export function setupUIHandlers(map) {
     
     mapillarySlider.addEventListener('touchend', () => {
       isUserDragging = false;
+    });
+  }
+  
+  // Car access switch handler (for car_customizable profile only)
+  const carAccessSwitch = document.getElementById('allow-car-access');
+  if (carAccessSwitch) {
+    carAccessSwitch.addEventListener('change', (e) => {
+      if (routeState.selectedProfile !== 'car_customizable') {
+        return;
+      }
+      
+      const allowCarAccess = e.target.checked;
+      routeState.allowCarAccess = allowCarAccess;
+      
+      // Update custom model
+      if (routeState.customModel) {
+        routeState.customModel = updateCarAccessRule(
+          routeState.customModel,
+          allowCarAccess
+        );
+      }
+      
+      // Recalculate route if ready
+      recalculateRouteIfReady();
     });
   }
   

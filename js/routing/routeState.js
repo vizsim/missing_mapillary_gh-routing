@@ -33,6 +33,11 @@ export const routeState = {
   // Custom model for car_customizable and bike_customizable profiles
   customModel: null,
   
+  // Car access setting (for car_customizable profile only)
+  // false = block restricted roads (motor_vehicle=destination, private, no), true = allow them
+  // Default: false (block restricted roads to avoid illegal routes)
+  allowCarAccess: false,
+  
   // Default custom model (imported from customModel.js)
   // Returns the appropriate default model based on selected profile
   get defaultCustomModel() {

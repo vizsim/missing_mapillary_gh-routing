@@ -36,6 +36,7 @@ export const defaultCarCustomModel = {
     // Kleine Straßen abwerten (weniger bevorzugt)
     {"if": "road_class==RESIDENTIAL||road_class==LIVING_STREET", "multiply_by": 0.7},
     {"if": "road_class==SERVICE", "multiply_by": 0.5},
+    //{"if": "road_class==TRACK", "multiply_by": 0.4},
     
     // Schlechte Oberflächen abwerten
     {"if": "surface==SAND||surface==GRAVEL||surface==GROUND||surface==DIRT", "multiply_by": 0.8},
@@ -53,6 +54,11 @@ export const defaultCarCustomModel = {
     
     // Access-Logik: Kein Autozugang = sperren
     {"if": "car_access==false", "limit_to": 0},
+    
+    // Durchfahrtsbeschränkungen (motor_vehicle=destination, private, no) sperren
+    // Diese Regel wird dynamisch aktiviert/deaktiviert über updateCarAccessRule()
+    // Standard: aktiviert (sperrt Wege mit road_access==DESTINATION, PRIVATE oder NO)
+    {"if": "road_access==DESTINATION||road_access==PRIVATE||road_access==NO", "limit_to": 0},
     
     // Fußwege, Wege, Treppen und Radwege sperren
     {"if": "road_class==FOOTWAY||road_class==PATH||road_class==STEPS||road_class==CYCLEWAY", "limit_to": 0},
@@ -316,5 +322,76 @@ export function getMapillaryPriority(customModel) {
     : mapillaryRule.multiply_by;
   
   return isNaN(value) ? null : value;
+}
+
+// Update car access rule in custom model (for car_customizable profile only)
+// allowCarAccess: true = allow restricted roads (DESTINATION, PRIVATE, NO), false = block them (default)
+export function updateCarAccessRule(customModel, allowCarAccess) {
+  if (!customModel || !customModel.speed) {
+    return customModel;
+  }
+  
+  // Find the car access rule (check for DESTINATION, PRIVATE, or NO)
+  const carAccessRuleIndex = customModel.speed.findIndex(
+    r => r.if && (r.if.includes('road_access==DESTINATION') || 
+                  r.if.includes('road_access==PRIVATE') || 
+                  r.if.includes('road_access==NO'))
+  );
+  
+  if (carAccessRuleIndex === -1) {
+    // Rule doesn't exist, add it if we want to block restricted roads
+    if (!allowCarAccess) {
+      // Find position after car_access rule
+      const carAccessIndex = customModel.speed.findIndex(
+        r => r.if && r.if.includes('car_access==false')
+      );
+      if (carAccessIndex !== -1) {
+        customModel.speed.splice(carAccessIndex + 1, 0, {
+          "if": "road_access==DESTINATION||road_access==PRIVATE||road_access==NO",
+          "limit_to": 0
+        });
+      } else {
+        // Fallback: add at beginning of speed rules
+        customModel.speed.unshift({
+          "if": "road_access==DESTINATION||road_access==PRIVATE||road_access==NO",
+          "limit_to": 0
+        });
+      }
+    }
+  } else {
+    // Rule exists, update or remove it
+    if (allowCarAccess) {
+      // Remove the rule to allow restricted roads
+      customModel.speed.splice(carAccessRuleIndex, 1);
+    } else {
+      // Ensure the rule blocks restricted roads
+      customModel.speed[carAccessRuleIndex] = {
+        "if": "road_access==DESTINATION||road_access==PRIVATE||road_access==NO",
+        "limit_to": 0
+      };
+    }
+  }
+  
+  return customModel;
+}
+
+// Get car access rule state from custom model
+// Returns true if restricted roads (DESTINATION, PRIVATE, NO) are allowed, false if blocked
+export function getCarAccessRule(customModel) {
+  if (!customModel || !customModel.speed) {
+    // Default: block restricted roads
+    return false;
+  }
+  
+  // Check if car access rule exists (check for DESTINATION, PRIVATE, or NO)
+  const carAccessRule = customModel.speed.find(
+    r => r.if && (r.if.includes('road_access==DESTINATION') || 
+                  r.if.includes('road_access==PRIVATE') || 
+                  r.if.includes('road_access==NO'))
+  );
+  
+  // If rule exists, restricted roads are blocked (return false)
+  // If rule doesn't exist, restricted roads are allowed (return true)
+  return carAccessRule === undefined;
 }
 

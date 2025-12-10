@@ -11,7 +11,8 @@ import {
   ensureCustomModel,
   buildPostRequestBodyWithCustomModel,
   getMapillaryPriority,
-  updateMapillaryPriority
+  updateMapillaryPriority,
+  updateCarAccessRule
 } from './customModel.js';
 import { calculateDistance } from './heightgraph/heightgraphUtils.js';
 import { optimizeWaypoints } from './waypointOptimizer.js';
@@ -698,6 +699,14 @@ export async function calculateRoute(map, start, end, waypoints = []) {
     // Ensure custom model is initialized if needed
     if (supportsCustomModel(routeState.selectedProfile)) {
       routeState.customModel = ensureCustomModel(routeState.customModel, routeState.selectedProfile);
+      
+      // Update car access rule for car_customizable profile
+      if (routeState.selectedProfile === 'car_customizable' && routeState.customModel) {
+        routeState.customModel = updateCarAccessRule(
+          routeState.customModel,
+          routeState.allowCarAccess
+        );
+      }
     }
     
     // Fetch route from GraphHopper API

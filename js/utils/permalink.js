@@ -10,6 +10,7 @@ import {
   isDefaultCustomModel,
   getMapillaryPriority,
   updateMapillaryPriority,
+  updateCarAccessRule,
   defaultCarCustomModel,
   defaultBikeCustomModel
 } from '../routing/customModel.js';
@@ -164,6 +165,11 @@ export class Permalink {
       // Only add to URL if it differs from the default
       if (currentWeight !== null && currentWeight !== undefined && currentWeight !== defaultWeight) {
         paramParts.push(`mapillary_weight=${currentWeight.toString()}`);
+      }
+      
+      // Car access (only for car_customizable, only if enabled)
+      if (routeState.selectedProfile === 'car_customizable' && routeState.allowCarAccess) {
+        paramParts.push('allowCarAccess=1');
       }
     }
     
@@ -376,7 +382,27 @@ export class Permalink {
       routeState.customModel = ensureCustomModel(routeState.customModel, routeState.selectedProfile);
     }
     
-    // Initialize slider if car_customizable is selected
+    // Load car access setting (for car_customizable profile only)
+    const allowCarAccessParam = params.get('allowCarAccess');
+    // Support legacy parameter name for backwards compatibility
+    const legacyParam = params.get('allowDestinationAccess');
+    const paramValue = allowCarAccessParam || legacyParam;
+    if (paramValue === '1' || paramValue === 'true') {
+      routeState.allowCarAccess = true;
+    } else {
+      // Default: false (block restricted roads)
+      routeState.allowCarAccess = false;
+    }
+    
+    // Update custom model with car access rule
+    if (routeState.selectedProfile === 'car_customizable' && routeState.customModel) {
+      routeState.customModel = updateCarAccessRule(
+        routeState.customModel,
+        routeState.allowCarAccess
+      );
+    }
+    
+    // Initialize slider and car access switch if customizable profile is selected
     if (supportsCustomModel(routeState.selectedProfile)) {
       // Wait a bit for UI to be ready
       setTimeout(() => {
@@ -408,6 +434,16 @@ export class Permalink {
                 const inverseValue = (1 / multiplyBy).toFixed(0);
                 sliderValue.textContent = `${multiplyBy.toFixed(2)} (×${inverseValue})`;
               }
+            }
+          }
+          
+          // Initialize car access switch for car_customizable
+          if (routeState.selectedProfile === 'car_customizable') {
+            const carAccessContainer = document.getElementById('car-access-container');
+            const carAccessSwitch = document.getElementById('allow-car-access');
+            if (carAccessContainer && carAccessSwitch) {
+              carAccessContainer.style.display = 'block';
+              carAccessSwitch.checked = routeState.allowCarAccess;
             }
           }
         }
@@ -597,6 +633,11 @@ export class Permalink {
       // Only add to URL if it differs from the default
       if (currentWeight !== null && currentWeight !== undefined && currentWeight !== defaultWeight) {
         paramParts.push(`mapillary_weight=${currentWeight.toString()}`);
+      }
+      
+      // Car access (only for car_customizable, only if enabled)
+      if (routeState.selectedProfile === 'car_customizable' && routeState.allowCarAccess) {
+        paramParts.push('allowCarAccess=1');
       }
     }
     
