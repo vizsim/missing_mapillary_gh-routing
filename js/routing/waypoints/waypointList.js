@@ -109,6 +109,18 @@ function setupWaypointDragHandlers(item, index, waypointsList) {
     }, 10);
   });
   
+  // Drag leave - remove indicator when mouse leaves item
+  item.addEventListener('dragleave', (e) => {
+    // Only remove if we're actually leaving the item (not just moving to a child)
+    if (!item.contains(e.relatedTarget)) {
+      item.classList.remove('drag-over', 'drag-over-before', 'drag-over-after');
+      if (item._dragOverTimeout) {
+        clearTimeout(item._dragOverTimeout);
+        item._dragOverTimeout = null;
+      }
+    }
+  });
+  
   // Drop
   item.addEventListener('drop', (e) => {
     e.preventDefault();
@@ -170,6 +182,9 @@ function updateDragOverIndicator(item, mouseY) {
   const rect = item.getBoundingClientRect();
   const itemCenterY = rect.top + rect.height / 2;
   const insertAfter = mouseY > itemCenterY;
+  
+  // Add base drag-over class
+  item.classList.add('drag-over');
   
   if (insertAfter) {
     item.classList.add('drag-over-after');
