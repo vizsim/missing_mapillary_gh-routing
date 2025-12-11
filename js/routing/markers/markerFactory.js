@@ -10,6 +10,40 @@ import { updateCoordinateTooltips } from '../coordinates/coordinateTooltips.js';
 import { recalculateRouteIfReady } from '../routeRecalculator.js';
 import { showWaypointContextMenu } from './waypointContextMenu.js';
 
+// Marker constants
+const MARKER_SIZE = '32px';
+const DROP_SHADOW_FILTER = 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))';
+
+/**
+ * Create base marker element with common properties
+ * @param {string} className - CSS class name for the marker
+ * @returns {HTMLDivElement} Marker element
+ */
+function createBaseMarkerElement(className) {
+  const el = document.createElement('div');
+  el.className = `custom-marker ${className}`;
+  el.style.width = MARKER_SIZE;
+  el.style.height = MARKER_SIZE;
+  el.style.cursor = 'grab';
+  el.style.filter = DROP_SHADOW_FILTER;
+  return el;
+}
+
+/**
+ * Setup common drag handlers for markers
+ * @param {maplibregl.Marker} marker - Marker instance
+ * @param {HTMLDivElement} el - Marker element
+ */
+function setupDragHandlers(marker, el) {
+  marker.on('dragstart', () => {
+    el.style.cursor = 'grabbing';
+  });
+  
+  marker.on('dragend', () => {
+    el.style.cursor = 'grab';
+  });
+}
+
 /**
  * Create a start marker
  * @param {maplibregl.Map} map - Map instance
@@ -17,20 +51,15 @@ import { showWaypointContextMenu } from './waypointContextMenu.js';
  * @returns {maplibregl.Marker} Created marker
  */
 export function createStartMarker(map, lngLat) {
-  const el = document.createElement('div');
-  el.className = 'custom-marker start-marker';
-  el.style.width = '24px';
-  el.style.height = '24px';
-  el.style.cursor = 'grab';
+  const el = createBaseMarkerElement('start-marker');
   el.innerHTML = `
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="#10b981" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="#10b981" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
       <g transform="translate(12, 10) scale(0.6) translate(-12, -12)">
         <path d="m9.9 16.97 7.436-7.436a8 8 0 0 0 2.145-3.89l.318-1.401-1.402.317a8 8 0 0 0-3.89 2.146L9.192 12.02m.707 4.95 2.122 3.535c1.178-1.178 2.828-2.828 0-5.657L9.899 16.97zm0 0-2.828-2.829m0 0L3.536 12.02c1.178-1.179 2.828-2.829 5.656 0m-2.12 2.121 2.12-2.121M4.95 16.263s-1.703 2.54-.707 3.536c.995.996 3.535-.707 3.535-.707" fill="white" stroke="white" stroke-width="1.5"/>
       </g>
     </svg>
   `;
-  el.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))';
   
   const marker = new maplibregl.Marker({
     element: el,
@@ -40,12 +69,9 @@ export function createStartMarker(map, lngLat) {
     .setLngLat(lngLat)
     .addTo(map);
   
-  marker.on('dragstart', () => {
-    el.style.cursor = 'grabbing';
-  });
+  setupDragHandlers(marker, el);
   
   marker.on('dragend', async () => {
-    el.style.cursor = 'grab';
     const newLngLat = marker.getLngLat();
     routeState.startPoint = [newLngLat.lng, newLngLat.lat];
     
@@ -72,13 +98,9 @@ export function createStartMarker(map, lngLat) {
  * @returns {maplibregl.Marker} Created marker
  */
 export function createEndMarker(map, lngLat) {
-  const el = document.createElement('div');
-  el.className = 'custom-marker end-marker';
-  el.style.width = '24px';
-  el.style.height = '24px';
-  el.style.cursor = 'grab';
+  const el = createBaseMarkerElement('end-marker');
   el.innerHTML = `
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="#ef4444" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="#ef4444" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
       <g transform="translate(12, 10) scale(0.4) translate(-16, -16)">
         <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="white" stroke-miterlimit="10">
@@ -93,7 +115,6 @@ export function createEndMarker(map, lngLat) {
       </g>
     </svg>
   `;
-  el.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))';
   
   const marker = new maplibregl.Marker({
     element: el,
@@ -103,12 +124,9 @@ export function createEndMarker(map, lngLat) {
     .setLngLat(lngLat)
     .addTo(map);
   
-  marker.on('dragstart', () => {
-    el.style.cursor = 'grabbing';
-  });
+  setupDragHandlers(marker, el);
   
   marker.on('dragend', async () => {
-    el.style.cursor = 'grab';
     const newLngLat = marker.getLngLat();
     routeState.endPoint = [newLngLat.lng, newLngLat.lat];
     
@@ -136,21 +154,31 @@ export function createEndMarker(map, lngLat) {
  * @returns {maplibregl.Marker} Created marker
  */
 export function createWaypointMarker(map, waypoint, index) {
-  const el = document.createElement('div');
-  el.className = 'custom-marker waypoint-marker';
-  el.style.width = '32px';
-  el.style.height = '32px';
-  el.style.cursor = 'grab';
+  const el = createBaseMarkerElement('waypoint-marker');
+  
+  // Validate waypoint has svgId
+  if (!waypoint || !waypoint.svgId) {
+    console.warn('Waypoint missing svgId, using default');
+  }
   
   // Load and display the waypoint's unique SVG
-  const svgPath = `svgs/${waypoint.svgId}`;
+  const svgPath = `svgs/${waypoint?.svgId || 'raspberry-svgrepo-com.svg'}`;
+  const waypointNumber = index + 1;
+  
+  // Create pin design similar to start/end markers
+  // Orange pin with SVG icon in top (round) area and number in bottom (pointed) area
   el.innerHTML = `
-    <div style="width: 32px; height: 32px; position: relative;">
-      <img src="${svgPath}" alt="Waypoint ${index + 1}" class="waypoint-marker-img" style="width: 100%; height: 100%; object-fit: contain;">
-      <div style="position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); background: #f59e0b; color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${index + 1}</div>
-    </div>
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="#f59e0b" stroke="white" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Pin shape (round top, pointed bottom) -->
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+      <!-- SVG icon in upper round area (smaller) -->
+      <image href="${svgPath}" x="6" y="4" width="12" height="12" style="filter: brightness(0) invert(1) drop-shadow(0 1px 1px rgba(0,0,0,0.3));" preserveAspectRatio="xMidYMid meet"/>
+      <!-- Orange circular overlay behind number to hide symbol -->
+      <circle cx="12" cy="15" r="4" fill="#f59e0b" stroke="none"/>
+      <!-- Number in lower pointed area (smaller, slightly bold) -->
+      <text x="12" y="18" text-anchor="middle" fill="white" stroke="none" font-size="7.5" font-weight="bold" font-family="Arial, sans-serif">${waypointNumber}</text>
+    </svg>
   `;
-  el.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))';
   
   const marker = new maplibregl.Marker({
     element: el,
@@ -160,12 +188,9 @@ export function createWaypointMarker(map, waypoint, index) {
     .setLngLat([waypoint.lng, waypoint.lat])
     .addTo(map);
   
-  marker.on('dragstart', () => {
-    el.style.cursor = 'grabbing';
-  });
+  setupDragHandlers(marker, el);
   
   marker.on('dragend', async () => {
-    el.style.cursor = 'grab';
     const lngLat = marker.getLngLat();
     // Preserve SVG ID when updating coordinates
     routeState.waypoints[index] = {
