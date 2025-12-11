@@ -22,6 +22,7 @@ import { isRouteCalculationInProgress } from './routing.js';
 import { createStartMarker, createEndMarker, createWaypointMarker } from './markers/markerFactory.js';
 import { updateWaypointsList } from './waypoints/waypointList.js';
 import { updateCoordinateTooltips } from './coordinates/coordinateTooltips.js';
+import { addWaypoint } from './waypoints/waypointManager.js';
 
 // Available SVG files for waypoints
 const WAYPOINT_SVGS = [
