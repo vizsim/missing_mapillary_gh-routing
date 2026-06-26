@@ -4,11 +4,31 @@ import { routeState } from '../routeState.js';
 import { HEIGHTGRAPH_CONFIG } from './heightgraphConfig.js';
 import { calculateCumulativeDistances } from './heightgraphUtils.js';
 import { getBicycleInfraDescription } from '../colorSchemes.js';
+import { setCursorIndex, onCursorChange, getCursorIndex } from '../routeCursor.js';
 
 // Store event handlers to prevent duplicate listeners
 let heightgraphMouseMoveHandler = null;
 let heightgraphMouseLeaveHandler = null;
 let routeHighlightMarker = null;
+
+// Latest drawing context for the indicator line, refreshed on every setup, so a
+// cursor change driven by *another* view (the barchart) can redraw the line here.
+let hgIndicatorState = null;
+let cursorSubscribed = false;
+
+// Draw (or clear) the height-profile indicator line for a shared-cursor index.
+function drawIndicatorForIndex(index) {
+  const s = hgIndicatorState;
+  if (!s || !s.indicatorCanvas) return;
+  if (index == null || !s.cumulativeDistances || !s.cumulativeDistances.length || !s.totalDistance) {
+    clearIndicatorLine(s.indicatorCanvas, s.canvasWidth, s.canvasHeight);
+    return;
+  }
+  const i = Math.max(0, Math.min(s.cumulativeDistances.length - 1, index));
+  const ratio = Math.max(0, Math.min(1, s.cumulativeDistances[i] / s.totalDistance));
+  const x = s.padding.left + ratio * s.graphWidth;
+  drawIndicatorLine(s.indicatorCanvas, x, s.padding, s.graphHeight, s.canvasWidth, s.canvasHeight);
+}
 
 /**
  * Draw indicator line on indicator canvas
@@ -113,6 +133,23 @@ export function setupHeightgraphInteractivity(canvas, elevations, totalDistance,
     actualTotalDistance = computedCumulativeDistances[computedCumulativeDistances.length - 1];
   }
   
+  // Publish the current drawing context so the shared cursor can redraw the
+  // indicator line even when the move came from the barchart, and subscribe once.
+  hgIndicatorState = {
+    indicatorCanvas,
+    padding,
+    graphWidth: storedGraphWidth,
+    graphHeight: storedGraphHeight,
+    canvasWidth: storedCanvasWidth,
+    canvasHeight: storedCanvasHeight,
+    cumulativeDistances: computedCumulativeDistances,
+    totalDistance: actualTotalDistance,
+  };
+  if (!cursorSubscribed) {
+    onCursorChange(drawIndicatorForIndex);
+    cursorSubscribed = true;
+  }
+
   // Remove existing event listeners
   if (heightgraphMouseMoveHandler) {
     canvas.removeEventListener('mousemove', heightgraphMouseMoveHandler);
@@ -160,21 +197,11 @@ export function setupHeightgraphInteractivity(canvas, elevations, totalDistance,
     const topBoundary = padding.top;
     const bottomBoundary = padding.top + storedGraphHeight;
     
-    if (scaledX < leftBoundary || scaledX > rightBoundary || 
+    if (scaledX < leftBoundary || scaledX > rightBoundary ||
         scaledY < topBoundary || scaledY > bottomBoundary) {
-      // Mouse outside graph area
+      // Mouse outside the plot area: hide the tooltip but keep the shared cursor
+      // where it is (it is persistent, so the handle/point stay put).
       tooltip.style.display = 'none';
-      if (routeHighlightMarker) {
-        routeHighlightMarker.remove();
-        routeHighlightMarker = null;
-      }
-      if (routeState.mapInstance && routeState.mapInstance.getSource('heightgraph-hover-point')) {
-        routeState.mapInstance.getSource('heightgraph-hover-point').setData({
-          type: 'FeatureCollection',
-          features: []
-        });
-      }
-      clearIndicatorLine(indicatorCanvas, storedCanvasWidth, storedCanvasHeight);
       return;
     }
     
@@ -290,48 +317,25 @@ export function setupHeightgraphInteractivity(canvas, elevations, totalDistance,
       tooltip.style.top = tooltipTop + 'px';
       tooltip.style.visibility = 'visible';
       
-      // Update route highlight
-      if (coord && routeState.mapInstance) {
-        if (routeHighlightMarker) {
-          routeHighlightMarker.remove();
-          routeHighlightMarker = null;
-        }
-        
-        if (routeState.mapInstance.getSource('heightgraph-hover-point')) {
-          routeState.mapInstance.getSource('heightgraph-hover-point').setData({
-            type: 'Feature',
-            geometry: {
-              type: 'Point',
-              coordinates: [coord[0], coord[1]]
-            },
-            properties: {}
-          });
-        }
-        
-        // Draw indicator line
-        drawIndicatorLine(indicatorCanvas, segmentMidX, padding, storedGraphHeight, storedCanvasWidth, storedCanvasHeight);
-      }
+      // Move the shared cursor. This updates the route-line point, the barchart
+      // handle and (via the subscription above) this indicator line — all in sync.
+      setCursorIndex(dataIndex);
     }
   };
   
   heightgraphMouseLeaveHandler = () => {
+    // Only hide the tooltip — the shared cursor is persistent, so the indicator
+    // line, route-line point and barchart handle stay at the last position.
     tooltip.style.display = 'none';
-    if (routeHighlightMarker) {
-      routeHighlightMarker.remove();
-      routeHighlightMarker = null;
-    }
-    if (routeState.mapInstance && routeState.mapInstance.getSource('heightgraph-hover-point')) {
-      routeState.mapInstance.getSource('heightgraph-hover-point').setData({
-        type: 'FeatureCollection',
-        features: []
-      });
-    }
-    clearIndicatorLine(indicatorCanvas, storedCanvasWidth, storedCanvasHeight);
   };
   
   // Add event listeners
   canvas.addEventListener('mousemove', heightgraphMouseMoveHandler);
   canvas.addEventListener('mouseleave', heightgraphMouseLeaveHandler);
+
+  // Restore the indicator line for the persistent cursor after a redraw
+  // (encoded-value change, resize, theme switch).
+  drawIndicatorForIndex(getCursorIndex());
 }
 
 /**
@@ -360,14 +364,11 @@ export function cleanupInteractivityHandlers() {
   if (tooltip) {
     tooltip.remove();
   }
-  
-  if (routeState.mapInstance && routeState.mapInstance.getSource('heightgraph-hover-point')) {
-    routeState.mapInstance.getSource('heightgraph-hover-point').setData({
-      type: 'FeatureCollection',
-      features: []
-    });
-  }
-  
+
+  // Note: the route-line point ('heightgraph-hover-point') is owned by the shared
+  // cursor now and is cleared via clearCursor() on route clear — not here, so it
+  // survives heightgraph redraws.
+
   if (routeHighlightMarker) {
     routeHighlightMarker.remove();
     routeHighlightMarker = null;

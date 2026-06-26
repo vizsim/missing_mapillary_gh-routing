@@ -320,7 +320,90 @@
         </div>
         <div id="heightgraph-stats" class="heightgraph-stats"></div>
       </div>
-      
+
+      <div id="profile-bars-container" class="profile-bars-container">
+        <div class="profile-bars-header">
+          <div class="profile-bars-title">
+            <span>Routenprofil-Balken</span>
+            <span class="info-icon-small" title="Zeichnet pro Streckenabschnitt einen Balken quer zur Route. Länge und Farbe codieren einen numerischen Wert (z. B. Höhe, Steigung). Die Route bildet die (gekrümmte) X-Achse.">ⓘ</span>
+          </div>
+          <label class="switch-toggle">
+            <input type="checkbox" id="profile-bars-toggle" />
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+        <div id="profile-bars-controls" class="profile-bars-controls" style="display: none;">
+          <div class="profile-bars-control-row">
+            <label for="profile-bars-value">Wert</label>
+            <select id="profile-bars-value" class="heightgraph-select"></select>
+          </div>
+          <div class="profile-bars-control-row">
+            <label for="profile-bars-scheme">Farbskala</label>
+            <select id="profile-bars-scheme" class="heightgraph-select"></select>
+          </div>
+          <div class="profile-bars-control-row">
+            <label for="profile-bars-side">Seite</label>
+            <select id="profile-bars-side" class="heightgraph-select">
+              <option value="east">Osten (rechts)</option>
+              <option value="west">Westen (links)</option>
+            </select>
+          </div>
+          <div class="profile-bars-control-row">
+            <label for="profile-bars-height">Höhe</label>
+            <input type="range" id="profile-bars-height" class="slider" min="0.01" max="0.15" step="0.01" value="0.05">
+          </div>
+          <div id="profile-bars-legend" class="profile-bars-legend" style="display: none;"></div>
+        </div>
+      </div>
+
+      <div id="profile3d-container" class="profile-bars-container">
+        <div class="profile-bars-header">
+          <div class="profile-bars-title">
+            <span>3D-Routenprofil</span>
+            <span class="info-icon-small" title="Zeichnet den Wert als senkrechte 3D-Säulen (native MapLibre fill-extrusion) – auf der Route selbst oder auf einer Basislinie daneben. Kippt die Karte in die 3D-Ansicht und kann Gebäude extrudieren.">ⓘ</span>
+          </div>
+          <label class="switch-toggle">
+            <input type="checkbox" id="profile3d-toggle" />
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+        <div id="profile3d-controls" class="profile-bars-controls" style="display: none;">
+          <div class="profile-bars-control-row">
+            <label for="profile3d-variant">Säulen</label>
+            <select id="profile3d-variant" class="heightgraph-select">
+              <option value="route">Auf der Route</option>
+              <option value="baseline">Auf Basislinie (Route daneben)</option>
+            </select>
+          </div>
+          <div class="profile-bars-control-row">
+            <label for="profile3d-value">Wert</label>
+            <select id="profile3d-value" class="heightgraph-select"></select>
+          </div>
+          <div class="profile-bars-control-row">
+            <label for="profile3d-scheme">Farbskala</label>
+            <select id="profile3d-scheme" class="heightgraph-select"></select>
+          </div>
+          <div class="profile-bars-control-row">
+            <label for="profile3d-height">Höhe (m)</label>
+            <input type="range" id="profile3d-height" class="slider" min="50" max="800" step="10" value="250">
+          </div>
+          <div class="profile-bars-control-row">
+            <label for="profile3d-buildings">Gebäude 3D</label>
+            <label class="switch-toggle">
+              <input type="checkbox" id="profile3d-buildings" checked />
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+          <div class="profile-bars-control-row">
+            <label for="profile3d-terrain">Gelände 3D</label>
+            <label class="switch-toggle">
+              <input type="checkbox" id="profile3d-terrain" />
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
       <div class="github-links">
         <img src="https://img.shields.io/badge/Status-Experimental-red" alt="Status: Experimental" class="status-badge">
         <div style="flex: 1;"></div>

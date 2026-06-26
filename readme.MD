@@ -99,9 +99,35 @@ missing_mapillary_gh-routing/
 
 ## Verwendung
 
-Die Anwendung kann direkt im Browser geöffnet werden: [https://vizsim.github.io/missing_mapillary_gh-routing/](https://vizsim.github.io/missing_mapillary_gh-routing/)
+Die gehostete Version läuft hier: [https://vizsim.github.io/missing_mapillary_gh-routing/](https://vizsim.github.io/missing_mapillary_gh-routing/)
 
-Die Anwendung nutzt eine eigene GraphHopper-Instanz, die auf [ghroute.vizsim.de](https://ghroute.vizsim.de) erreichbar ist.
+Die Anwendung nutzt eine eigene GraphHopper-Instanz, die auf [ghroute.vizsim.de](https://ghroute.vizsim.de) erreichbar ist. Für die lokale Entwicklung muss kein eigenes Backend gestartet werden.
+
+### Lokal starten
+
+Die App ist eine statische Seite aus Vanilla JS mit ES-Modulen – **kein Build-Schritt, keine Installation**. Sie muss aber über einen HTTP-Server ausgeliefert werden, da ES-Module und `fetch` nicht über `file://` funktionieren (ein direkter Doppelklick auf `index.html` reicht also nicht).
+
+Am einfachsten mit [Bun](https://bun.sh) – `bunx` lädt den Server bei Bedarf und führt ihn aus, ohne dauerhaft etwas zu installieren. Im Projektordner:
+
+```bash
+bunx serve
+```
+
+Anschließend im Browser öffnen: <http://localhost:3000>
+
+Eigener Port:
+
+```bash
+bunx serve -l 8000   # -> http://localhost:8000
+```
+
+Alternativen (falls Bun nicht vorhanden ist):
+
+```bash
+python3 -m http.server 8000   # -> http://localhost:8000
+# oder
+npx serve
+```
 
 ---
 
